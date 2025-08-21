@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
@@ -13,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Hotel, Building, Link as LinkIcon, Upload, Mail, KeySquare, Phone, MapPin, Banknote, Trash2, PlusCircle, Wand2 } from 'lucide-react';
+import { Hotel, Building, Upload, Mail, KeySquare, Phone, MapPin, Banknote, Trash2, PlusCircle, Wand2, Clipboard, Check } from 'lucide-react';
 
 const mealOptions = [
   { id: 'breakfast', label: 'Frühstück' },
@@ -26,6 +27,9 @@ type CreateHotelFormValues = z.infer<typeof createHotelSchema>;
 
 export default function CreateHotelPage() {
   const { toast } = useToast();
+  const [isEmailCopied, setIsEmailCopied] = useState(false);
+  const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+
   const form = useForm<CreateHotelFormValues>({
     resolver: zodResolver(createHotelSchema),
     defaultValues: {
@@ -71,7 +75,28 @@ export default function CreateHotelPage() {
   const generatePassword = () => {
     const newPassword = Math.random().toString(36).slice(-10);
     form.setValue('hotelierPassword', newPassword);
+  };
+
+  const copyToClipboard = (text: string, onCopy: () => void) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    onCopy();
+  };
+  
+  const handleCopyEmail = () => {
+    copyToClipboard(form.getValues('hotelierEmail'), () => {
+        setIsEmailCopied(true);
+        setTimeout(() => setIsEmailCopied(false), 2000);
+    });
   }
+
+  const handleCopyPassword = () => {
+    copyToClipboard(form.getValues('hotelierPassword'), () => {
+        setIsPasswordCopied(true);
+        setTimeout(() => setIsPasswordCopied(false), 2000);
+    });
+  }
+
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -111,17 +136,31 @@ export default function CreateHotelPage() {
                         </FormControl><FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={form.control} name="hotelierEmail" render={({ field }) => (
-                    <FormItem><FormLabel>E-Mail-Adresse des Hoteliers</FormLabel><FormControl><Input type="email" placeholder="info@residence-pausa.it" {...field} /></FormControl><FormMessage /></FormItem>
+                   <FormField control={form.control} name="hotelierEmail" render={({ field }) => (
+                    <FormItem><FormLabel>E-Mail-Adresse des Hoteliers</FormLabel>
+                        <FormControl>
+                            <div className="relative">
+                                <Input type="email" placeholder="info@residence-pausa.it" {...field} />
+                                <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={handleCopyEmail}>
+                                    {isEmailCopied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4"/>}
+                                </Button>
+                            </div>
+                        </FormControl><FormMessage />
+                    </FormItem>
                   )} />
                    <FormField control={form.control} name="hotelierPassword" render={({ field }) => (
                     <FormItem><FormLabel>Passwort des Hoteliers</FormLabel>
                         <FormControl>
                             <div className="relative">
                                 <Input type="password" placeholder="Passwort generieren..." {...field} />
-                                <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={generatePassword}>
-                                    <Wand2 className="h-4 w-4"/>
-                                </Button>
+                                 <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleCopyPassword}>
+                                        {isPasswordCopied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4"/>}
+                                    </Button>
+                                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={generatePassword}>
+                                        <Wand2 className="h-4 w-4"/>
+                                    </Button>
+                                </div>
                             </div>
                         </FormControl><FormMessage />
                     </FormItem>
