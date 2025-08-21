@@ -1,10 +1,8 @@
 import Link from 'next/link';
-import { Building, KeyRound, Mail, Home } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 export default function HotelierLoginPage() {
   return (
@@ -20,25 +18,11 @@ export default function HotelierLoginPage() {
           <CardDescription>Welcome back! Please sign in to your account.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="manager@hotel.com" required className="pl-10" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-               <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="password" type="password" required className="pl-10" />
-              </div>
-            </div>
-            <Button type="submit" className="w-full text-lg h-12 font-bold">
-              Sign In
+          <div className="space-y-6">
+             <Button asChild className="w-full text-lg h-12 font-bold">
+              <Link href="/dashboard/hotel-001">Sign In</Link>
             </Button>
-          </form>
+          </div>
           <div className="mt-6 text-center text-sm">
             <Link href="/agency/login" className="text-primary hover:underline">
               Are you an agency admin? Login here.
