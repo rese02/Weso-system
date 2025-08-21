@@ -5,7 +5,7 @@ import { CheckCircle2 } from 'lucide-react';
 
 export default function ThankYouPage() {
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+    <div className="flex w-full items-center justify-center p-4">
       <Card className="w-full max-w-lg text-center">
         <CardHeader>
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
@@ -22,10 +22,10 @@ export default function ThankYouPage() {
             We look forward to welcoming you!
           </p>
           <Button asChild>
-            <Link href="/">Return to Homepage</Link>
+            <Link href="/">Return to Agency Portal</Link>
           </Button>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

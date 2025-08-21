@@ -1,4 +1,3 @@
-// src/lib/actions/email.actions.ts
 'use server';
 
 interface EmailPayload {
@@ -23,5 +22,6 @@ export async function sendEmail(payload: EmailPayload) {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
 
+  // In a real app, you would have error handling here based on the email service response
   return { success: true, message: 'Email sent successfully (simulated).' };
 }

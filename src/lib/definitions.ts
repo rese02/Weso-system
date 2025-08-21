@@ -24,7 +24,7 @@ export type Booking = {
   checkInDate: Date;
   checkOutDate: Date;
   roomType: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: 'pending_guest' | 'confirmed' | 'cancelled';
   guestLinkId: string;
   createdAt: Date;
 };
@@ -95,9 +95,9 @@ export const guestDetailsSchema = z.object({
 });
 
 export const documentUploadSchema = z.object({
-    documentUrl: z.string().url("A valid document URL is required."),
+    documentUrl: z.string().url("A valid document URL is required.").optional().or(z.literal('')),
 });
 
 export const paymentProofSchema = z.object({
-    paymentProofUrl: z.string().url("A valid payment proof URL is required."),
+    paymentProofUrl: z.string().url("A valid payment proof URL is required.").optional().or(z.literal('')),
 });
