@@ -3,16 +3,60 @@
 import type { z } from 'zod';
 import type { createBookingSchema } from '@/lib/definitions';
 import { generateConfirmationEmail } from '@/ai/flows/generate-confirmation-email';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
-// Placeholder function to create a new booking and generate a guest link
+// Function to create a new booking and generate a guest link
 export async function createBookingLink(hotelId: string, values: z.infer<typeof createBookingSchema>) {
   console.log(`Creating booking for hotel ${hotelId} with values:`, values);
-  // 1. Create a 'booking' document in Firestore
-  // 2. Create a 'guestLink' document with a unique ID
-  // 3. Return the unique link ID
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  const linkId = `guest-link-${Math.random().toString(36).substring(2, 9)}`;
-  return { success: true, message: 'Booking link created!', link: `/guest/${linkId}` };
+  if (!adminDb) {
+    console.error("Firestore not initialized.");
+    return { success: false, message: 'Server configuration error.' };
+  }
+
+  try {
+    const hotelRef = adminDb.collection('hotels').doc(hotelId);
+    const bookingLinkRef = adminDb.collection('bookingLinkIndex').doc();
+    const bookingRef = hotelRef.collection('bookings').doc();
+
+    const bookingData = {
+        id: bookingRef.id,
+        hotelId: hotelId,
+        guestName: values.guestName,
+        checkInDate: values.checkInDate,
+        checkOutDate: values.checkOutDate,
+        roomType: values.roomType,
+        status: 'pending',
+        guestLinkId: bookingLinkRef.id,
+        createdAt: FieldValue.serverTimestamp(),
+    };
+
+    const bookingLinkData = {
+        hotelId: hotelId,
+    };
+    
+    const guestLinkData = {
+        id: bookingLinkRef.id,
+        bookingId: bookingRef.id,
+        hotelId: hotelId,
+        isCompleted: false,
+        createdAt: FieldValue.serverTimestamp(),
+        // expiresAt can also be set here
+    }
+
+    // Use a batch write to ensure atomicity
+    const batch = adminDb.batch();
+    batch.set(bookingRef, bookingData);
+    batch.set(bookingLinkRef, bookingLinkData);
+    batch.set(hotelRef.collection('guestLinks').doc(bookingLinkRef.id), guestLinkData);
+    
+    await batch.commit();
+
+    return { success: true, message: 'Booking link created!', link: `/guest/${bookingLinkRef.id}` };
+  } catch (error) {
+    console.error("Error creating booking link: ", error);
+    return { success: false, message: 'Failed to create booking link.' };
+  }
 }
 
 // Placeholder to get bookings for a specific hotel
