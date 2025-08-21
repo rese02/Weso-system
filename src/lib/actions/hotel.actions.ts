@@ -1,5 +1,6 @@
 'use server';
 
+import 'dotenv/config'; // Load environment variables
 import type { z } from 'zod';
 import type { createHotelSchema } from '@/lib/definitions';
 import { adminDb } from '@/lib/firebase-admin';
