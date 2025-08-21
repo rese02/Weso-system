@@ -23,17 +23,17 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
       // A user account should be created via Firebase Auth instead. We'll skip storing it.
       ownerUid: '', // This would be the Firebase Auth UID of the hotelier
       
-      contactEmail: values.contactEmail || '',
-      contactPhone: values.contactPhone || '',
-      contactAddress: values.fullAddress || '',
+      contactEmail: values.contactEmail,
+      contactPhone: values.contactPhone,
+      contactAddress: values.fullAddress,
       
-      boardTypes: values.meals || [],
+      boardTypes: values.meals,
       roomCategories: values.roomCategories.map(c => c.name),
       
-      bankAccountHolder: values.bankAccountHolder || '',
-      bankIBAN: values.iban || '',
-      bankBIC: values.bic || '',
-      bankName: values.bankName || '',
+      bankAccountHolder: values.bankAccountHolder,
+      bankIBAN: values.iban,
+      bankBIC: values.bic,
+      bankName: values.bankName,
       
       createdAt: new Date(),
     };

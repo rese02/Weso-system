@@ -47,19 +47,19 @@ export const createHotelSchema = z.object({
   hotelierPassword: z.string().min(8, { message: 'Passwort muss mindestens 8 Zeichen lang sein.' }),
   
   // Section B
-  contactEmail: z.string().email({ message: "Ungültige Kontakt-E-Mail-Adresse." }).optional(),
-  contactPhone: z.string().optional(),
-  fullAddress: z.string().min(10, { message: "Vollständige Adresse ist erforderlich." }).optional(),
+  contactEmail: z.string().email({ message: "Ungültige Kontakt-E-Mail-Adresse." }),
+  contactPhone: z.string(),
+  fullAddress: z.string().min(10, { message: "Vollständige Adresse ist erforderlich." }),
 
   // Section C
-  meals: z.array(z.string()).optional(),
+  meals: z.array(z.string()),
   roomCategories: z.array(z.object({ name: z.string().min(2, {message: 'Kategoriename erforderlich'}) })).min(1, "Mindestens eine Zimmerkategorie ist erforderlich."),
 
   // Section D
-  bankAccountHolder: z.string().optional(),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-  bankName: z.string().optional(),
+  bankAccountHolder: z.string(),
+  iban: z.string(),
+  bic: z.string(),
+  bankName: z.string(),
 });
 
 

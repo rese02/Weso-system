@@ -67,7 +67,7 @@ export default function CreateHotelPage() {
       toast({
         variant: "destructive",
         title: "Fehler",
-        description: "Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+        description: result.message || "Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
       });
     }
   };
