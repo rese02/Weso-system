@@ -15,7 +15,9 @@ const serviceAccount = {
   client_x509_cert_url: process.env.FIREBASE_ADMIN_CLIENT_X509_CERT_URL,
 };
 
-if (!admin.apps.length) {
+const isConfigured = serviceAccount.project_id && serviceAccount.private_key && serviceAccount.client_email;
+
+if (isConfigured && !admin.apps.length) {
   try {
     admin.initializeApp({
       // @ts-ignore
@@ -26,9 +28,16 @@ if (!admin.apps.length) {
   }
 }
 
-const adminAuth = admin.auth();
-const adminDb = admin.firestore();
-const adminStorage = admin.storage();
+let adminAuth: admin.auth.Auth | undefined;
+let adminDb: admin.firestore.Firestore | undefined;
+let adminStorage: admin.storage.Storage | undefined;
+
+if (admin.apps.length > 0) {
+    adminAuth = admin.auth();
+    adminDb = admin.firestore();
+    adminStorage = admin.storage();
+}
+
 
 export { adminAuth, adminDb, adminStorage };
 

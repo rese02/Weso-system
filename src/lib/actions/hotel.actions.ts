@@ -3,12 +3,14 @@
 import type { z } from 'zod';
 import type { createHotelSchema } from '@/lib/definitions';
 import { adminDb } from '@/lib/firebase-admin';
-import { collection, addDoc, getDocs, doc, getDoc } from 'firebase/firestore';
-
 
 // Function to create a hotel
 export async function createHotel(values: z.infer<typeof createHotelSchema>) {
   console.log('Creating hotel with values:', values);
+  if (!adminDb) {
+    console.error("Firestore not initialized. Check Firebase Admin SDK credentials.");
+    return { success: false, message: 'Failed to create hotel due to server misconfiguration.' };
+  }
   try {
     const docRef = await adminDb.collection('hotels').add({
       ...values,
@@ -25,6 +27,10 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
 // Function to fetch all hotels for the agency
 export async function getHotels() {
   console.log('Fetching all hotels...');
+  if (!adminDb) {
+    console.error("Firestore not initialized. Check Firebase Admin SDK credentials.");
+    return [];
+  }
   try {
     const hotelsCollection = adminDb.collection('hotels');
     const hotelSnapshot = await hotelsCollection.get();
@@ -48,6 +54,16 @@ export async function getHotels() {
 // Placeholder to get a single hotel's data
 export async function getHotelById(hotelId: string) {
     console.log(`Fetching hotel ${hotelId}...`);
+    if (!adminDb) {
+        console.error("Firestore not initialized. Check Firebase Admin SDK credentials.");
+        return {
+            id: hotelId,
+            name: `Hotel ${hotelId}`,
+            address: '123 Fictional Avenue',
+            city: 'Metropolis',
+            country: 'USA'
+       };
+    }
     try {
       const hotelDoc = await adminDb.collection('hotels').doc(hotelId).get();
       if (!hotelDoc.exists) {
