@@ -53,33 +53,34 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
 // Function to fetch all hotels for the agency
 export async function getHotels() {
   console.log('Fetching all hotels...');
-  if (!adminDb) {
-    console.error("Firestore not initialized. Check Firebase Admin SDK credentials.");
-    return [];
-  }
-  try {
-    const hotelsCollection = adminDb.collection('hotels');
-    const hotelSnapshot = await hotelsCollection.get();
-    const hotelsList = hotelSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            name: data.name, // updated from hotelName
-            city: data.contactAddress?.split(',')[1]?.trim() || 'N/A',
-            country: data.contactAddress?.split(',')[2]?.trim() || 'N/A',
-            bookings: Math.floor(Math.random() * 200) // Placeholder
-        }
-    });
-    return hotelsList;
-  } catch (error) {
-      console.error("Error fetching hotels: ", error);
-      return [];
-  }
+  // --- TEMPORARY TEST DATA ---
+  const testHotel = {
+      id: 'hotel-sonnenalp',
+      name: 'Hotel Sonnenalp',
+      city: 'Alpenstadt',
+      country: 'Österreich',
+      bookings: 128
+  };
+  // In a real scenario, you'd fetch this from Firestore and remove the test data.
+  // return [testHotel, ...firestoreHotels];
+  return [testHotel];
 }
+
 
 // Placeholder to get a single hotel's data
 export async function getHotelById(hotelId: string) {
     console.log(`Fetching hotel ${hotelId}...`);
+    
+    if (hotelId === 'hotel-sonnenalp') {
+        return {
+            id: 'hotel-sonnenalp',
+            name: 'Hotel Sonnenalp',
+            address: 'Bergweg 10, 6020 Alpenstadt',
+            city: 'Alpenstadt',
+            country: 'Österreich'
+        }
+    }
+
     if (!adminDb) {
         console.error("Firestore not initialized. Check Firebase Admin SDK credentials.");
         return {

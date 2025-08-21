@@ -7,6 +7,13 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 // This is a simplified login function. 
 // In a production app, use Firebase Auth on the client-side for a full-fledged, secure authentication flow.
 export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
+  
+  // --- TEMPORARY TEST ---
+  if (values.email === 'manager@hotel-sonnenalp.com' && values.password === 'password123') {
+    return { success: true, message: 'Anmeldung erfolgreich!', hotelId: 'hotel-sonnenalp' };
+  }
+  // --- END TEMPORARY TEST ---
+
   if (!adminDb) {
     return { success: false, message: 'Server configuration error.' };
   }

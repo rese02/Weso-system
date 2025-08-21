@@ -60,12 +60,17 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
 export async function getBookingsByHotel(hotelId: string) {
     console.log(`Fetching bookings for hotel ${hotelId}...`);
     await new Promise(resolve => setTimeout(resolve, 500));
-    return [
+    
+    if (hotelId === 'hotel-sonnenalp') {
+      return [
         { id: 'booking-101', guestName: 'Alice Johnson', checkIn: '2024-08-15', checkOut: '2024-08-20', status: 'confirmed', room: 'Deluxe Suite' },
         { id: 'booking-102', guestName: 'Bob Williams', checkIn: '2024-08-16', checkOut: '2024-08-18', status: 'pending_guest', room: 'Standard Room' },
         { id: 'booking-103', guestName: 'Charlie Brown', checkIn: '2024-09-01', checkOut: '2024-09-05', status: 'confirmed', room: 'Ocean View King' },
         { id: 'booking-104', guestName: 'Diana Prince', checkIn: '2024-09-10', checkOut: '2024-09-15', status: 'cancelled', room: 'Presidential Suite' },
-    ]
+      ]
+    }
+    
+    return [];
 }
 
 // Placeholder to get details for a single booking
@@ -74,7 +79,7 @@ export async function getBookingDetails(bookingId: string) {
     await new Promise(resolve => setTimeout(resolve, 500));
     return {
         id: bookingId,
-        hotelId: 'hotel-001',
+        hotelId: 'hotel-sonnenalp',
         guestName: 'Alice Johnson',
         checkInDate: new Date('2024-08-15'),
         checkOutDate: new Date('2024-08-20'),
