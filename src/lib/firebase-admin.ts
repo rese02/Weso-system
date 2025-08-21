@@ -1,10 +1,10 @@
 // src/lib/firebase-admin.ts
 import admin from 'firebase-admin';
 
-// In a real application, you would load this from a secure location (e.g., environment variables).
+// Ensure you have set these environment variables
 const serviceAccount = {
   type: process.env.FIREBASE_ADMIN_TYPE,
-  project_id: process.env.FIREBASE_ADMIN_PROJECT_ID,
+  project_id: process.env.FIREBASE_PROJECT_ID,
   private_key_id: process.env.FIREBASE_ADMIN_PRIVATE_KEY_ID,
   private_key: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   client_email: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
@@ -13,7 +13,7 @@ const serviceAccount = {
   token_uri: process.env.FIREBASE_ADMIN_TOKEN_URI,
   auth_provider_x509_cert_url: process.env.FIREBASE_ADMIN_AUTH_PROVIDER_X509_CERT_URL,
   client_x509_cert_url: process.env.FIREBASE_ADMIN_CLIENT_X509_CERT_URL,
-}
+};
 
 if (!admin.apps.length) {
   try {
@@ -26,9 +26,11 @@ if (!admin.apps.length) {
   }
 }
 
-export const adminAuth = admin.auth();
-export const adminDb = admin.firestore();
-export const adminStorage = admin.storage();
+const adminAuth = admin.auth();
+const adminDb = admin.firestore();
+const adminStorage = admin.storage();
+
+export { adminAuth, adminDb, adminStorage };
 
 /**
  * Verifies the session cookie. This is a placeholder function.
