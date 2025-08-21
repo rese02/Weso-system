@@ -12,10 +12,34 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
     return { success: false, message: 'Failed to create hotel due to server misconfiguration.' };
   }
   try {
-    const docRef = await adminDb.collection('hotels').add({
-      ...values,
+    // We map the form values to the desired database structure
+    const hotelData = {
+      agencyId: "agency_weso_systems", // Placeholder, this would come from the logged in user
+      name: values.hotelName,
+      domain: values.domain || '',
+      logoUrl: '', // This will be updated after file upload
+      ownerEmail: values.hotelierEmail,
+      // ownerPassword is for authentication, not for storing in Firestore in plaintext.
+      // A user account should be created via Firebase Auth instead. We'll skip storing it.
+      ownerUid: '', // This would be the Firebase Auth UID of the hotelier
+      
+      contactEmail: values.contactEmail || '',
+      contactPhone: values.contactPhone || '',
+      contactAddress: values.fullAddress || '',
+      
+      boardTypes: values.meals || [],
+      roomCategories: values.roomCategories.map(c => c.name),
+      
+      bankAccountHolder: values.bankAccountHolder || '',
+      bankIBAN: values.iban || '',
+      bankBIC: values.bic || '',
+      bankName: values.bankName || '',
+      
       createdAt: new Date(),
-    });
+    };
+
+    const docRef = await adminDb.collection('hotels').add(hotelData);
+    
     console.log("Document written with ID: ", docRef.id);
     return { success: true, message: 'Hotel created successfully!', hotelId: docRef.id };
   } catch (e) {
@@ -38,9 +62,9 @@ export async function getHotels() {
         const data = doc.data();
         return {
             id: doc.id,
-            name: data.hotelName,
-            city: data.fullAddress?.split(',')[1]?.trim() || 'N/A',
-            country: data.fullAddress?.split(',')[2]?.trim() || 'N/A',
+            name: data.name, // updated from hotelName
+            city: data.contactAddress?.split(',')[1]?.trim() || 'N/A',
+            country: data.contactAddress?.split(',')[2]?.trim() || 'N/A',
             bookings: Math.floor(Math.random() * 200) // Placeholder
         }
     });
@@ -72,10 +96,10 @@ export async function getHotelById(hotelId: string) {
       const data = hotelDoc.data();
       return {
           id: hotelDoc.id,
-          name: data?.hotelName || `Hotel ${hotelId}`,
-          address: data?.fullAddress || '123 Fictional Avenue',
-          city: data?.fullAddress?.split(',')[1]?.trim() || 'Metropolis',
-          country: data?.fullAddress?.split(',')[2]?.trim() || 'USA'
+          name: data?.name || `Hotel ${hotelId}`,
+          address: data?.contactAddress || '123 Fictional Avenue',
+          city: data?.contactAddress?.split(',')[1]?.trim() || 'Metropolis',
+          country: data?.contactAddress?.split(',')[2]?.trim() || 'USA'
       }
     } catch (error) {
        console.error("Error fetching hotel by ID: ", error);
