@@ -80,7 +80,7 @@ export default function CreateBookingPage() {
                       <FormControl>
                         <div className="relative">
                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                           <Input placeholder="e.g., John Doe" {...field} className="pl-10" />
+                           <Input placeholder="Max Mustermann" {...field} className="pl-10" />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -178,7 +178,7 @@ export default function CreateBookingPage() {
                       <FormControl>
                         <div className="relative">
                             <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input placeholder="e.g., Deluxe King Suite" {...field} className="pl-10" />
+                            <Input placeholder="z.B. Deluxe Suite" {...field} className="pl-10" />
                         </div>
                       </FormControl>
                       <FormMessage />

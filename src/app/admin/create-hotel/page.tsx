@@ -121,10 +121,10 @@ export default function CreateHotelPage() {
                 <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Grunddaten / Zugang</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                   <FormField control={form.control} name="hotelName" render={({ field }) => (
-                    <FormItem><FormLabel>Hotelname</FormLabel><FormControl><Input placeholder="Residence La Pausa" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Hotelname</FormLabel><FormControl><Input placeholder="Ihr Hotelname" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="domain" render={({ field }) => (
-                    <FormItem><FormLabel>Domain oder Subdomain</FormLabel><FormControl><Input placeholder="hotel.example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Domain oder Subdomain</FormLabel><FormControl><Input placeholder="ihrhotel.de" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="logo" render={({ field }) => (
                      <FormItem><FormLabel>Hotel-Logo (PNG)</FormLabel>
@@ -140,7 +140,7 @@ export default function CreateHotelPage() {
                     <FormItem><FormLabel>E-Mail-Adresse des Hoteliers</FormLabel>
                         <FormControl>
                             <div className="relative">
-                                <Input type="email" placeholder="info@residence-pausa.it" {...field} />
+                                <Input type="email" placeholder="email@ihres-hotels.de" {...field} />
                                 <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={handleCopyEmail}>
                                     {isEmailCopied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4"/>}
                                 </Button>
@@ -152,7 +152,7 @@ export default function CreateHotelPage() {
                     <FormItem><FormLabel>Passwort des Hoteliers</FormLabel>
                         <FormControl>
                             <div className="relative">
-                                <Input type="password" placeholder="Passwort generieren..." {...field} />
+                                <Input type="password" placeholder="Generiertes Passwort" {...field} />
                                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
                                     <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleCopyPassword}>
                                         {isPasswordCopied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4"/>}
@@ -173,14 +173,14 @@ export default function CreateHotelPage() {
                 <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Mail className="h-5 w-5 text-primary"/>Öffentliche Kontaktdaten</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                   <FormField control={form.control} name="contactEmail" render={({ field }) => (
-                    <FormItem><FormLabel>Kontakt E-Mail</FormLabel><FormControl><Input type="email" placeholder="kontakt@hotelname.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Kontakt E-Mail</FormLabel><FormControl><Input type="email" placeholder="kontakt@ihrhotel.de" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="contactPhone" render={({ field }) => (
-                    <FormItem><FormLabel>Kontakt Telefonnummer</FormLabel><FormControl><Input placeholder="+39 0461 123456" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Kontakt Telefonnummer</FormLabel><FormControl><Input placeholder="Ihre Telefonnummer" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <div className="md:col-span-2">
                     <FormField control={form.control} name="fullAddress" render={({ field }) => (
-                        <FormItem><FormLabel>Vollständige Adresse</FormLabel><FormControl><Input placeholder="Via Dolomiti 12, 39048 Wolkenstein, Italien" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Vollständige Adresse</FormLabel><FormControl><Input placeholder="Ihre vollständige Adresse" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </div>
                 </div>
@@ -253,16 +253,16 @@ export default function CreateHotelPage() {
                 <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Banknote className="h-5 w-5 text-primary"/>Bankverbindung für Überweisungen</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                     <FormField control={form.control} name="bankAccountHolder" render={({ field }) => (
-                        <FormItem><FormLabel>Kontoinhaber</FormLabel><FormControl><Input placeholder="Residence La Pausa s.r.l." {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Kontoinhaber</FormLabel><FormControl><Input placeholder="Ihr Name oder Firmenname" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="bankName" render={({ field }) => (
-                        <FormItem><FormLabel>Bank (Name der Bank)</FormLabel><FormControl><Input placeholder="Banca Popolare di..." {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Bank (Name der Bank)</FormLabel><FormControl><Input placeholder="Name Ihrer Bank" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="iban" render={({ field }) => (
-                        <FormItem><FormLabel>IBAN</FormLabel><FormControl><Input placeholder="IT60X0542811101000000123456" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>IBAN</FormLabel><FormControl><Input placeholder="Ihre IBAN" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="bic" render={({ field }) => (
-                        <FormItem><FormLabel>BIC / SWIFT</FormLabel><FormControl><Input placeholder="BPPIITRRXXX" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>BIC / SWIFT</FormLabel><FormControl><Input placeholder="Ihre BIC/SWIFT" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
               </div>

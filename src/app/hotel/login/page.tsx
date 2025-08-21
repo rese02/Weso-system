@@ -68,7 +68,7 @@ export default function HotelierLoginPage() {
                   <FormItem>
                     <FormLabel>E-Mail-Adresse</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="ihre@email.com" {...field} />
+                      <Input type="email" placeholder="ihre@email.de" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

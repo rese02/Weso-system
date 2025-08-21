@@ -68,7 +68,7 @@ export default function SecurityAdvisorPage() {
                   <FormItem>
                     <FormLabel>Hotel Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="The Overlook Hotel" {...field} />
+                      <Input placeholder="z.B. Hotel Adlon" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -81,7 +81,7 @@ export default function SecurityAdvisorPage() {
                   <FormItem>
                     <FormLabel>Hotel Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., A large, isolated resort hotel in the Rocky Mountains..." {...field} />
+                      <Textarea placeholder="z.B. Ein großes, abgelegenes Resorthotel in den Alpen..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -94,7 +94,7 @@ export default function SecurityAdvisorPage() {
                   <FormItem>
                     <FormLabel>Existing Security Measures</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Night guard, limited CCTV..." {...field} />
+                      <Textarea placeholder="z.B. Nachtwächter, begrenzte Videoüberwachung..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -107,7 +107,7 @@ export default function SecurityAdvisorPage() {
                   <FormItem>
                     <FormLabel>Potential Threats</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Isolation, harsh winter conditions, potential for unauthorized access..." {...field} />
+                      <Textarea placeholder="z.B. Alleinlage, strenge Winterbedingungen, unbefugter Zutritt..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
