@@ -39,13 +39,30 @@ export type GuestLink = {
 };
 
 // Zod Schemas for validation
-
 export const createHotelSchema = z.object({
-  name: z.string().min(3, { message: 'Hotel name must be at least 3 characters long.' }),
-  address: z.string().min(5, { message: 'Address is required.' }),
-  city: z.string().min(2, { message: 'City is required.' }),
-  country: z.string().min(2, { message: 'Country is required.' }),
+  // Section A
+  hotelName: z.string().min(3, { message: 'Hotelname muss mindestens 3 Zeichen lang sein.' }),
+  domain: z.string().optional(),
+  logo: z.any().optional(), // In a real app, you'd use z.instanceof(File) or similar
+  hotelierEmail: z.string().email({ message: "Ungültige E-Mail-Adresse." }),
+  hotelierPassword: z.string().min(8, { message: 'Passwort muss mindestens 8 Zeichen lang sein.' }),
+  
+  // Section B
+  contactEmail: z.string().email({ message: "Ungültige Kontakt-E-Mail-Adresse." }).optional(),
+  contactPhone: z.string().optional(),
+  fullAddress: z.string().min(10, { message: "Vollständige Adresse ist erforderlich." }).optional(),
+
+  // Section C
+  meals: z.array(z.string()).optional(),
+  roomCategories: z.array(z.object({ name: z.string().min(2, {message: 'Kategoriename erforderlich'}) })).min(1, "Mindestens eine Zimmerkategorie ist erforderlich."),
+
+  // Section D
+  bankAccountHolder: z.string().optional(),
+  iban: z.string().optional(),
+  bic: z.string().optional(),
+  bankName: z.string().optional(),
 });
+
 
 export const securityAdvisorSchema = z.object({
   hotelName: z.string().min(1, "Hotel Name is required"),
