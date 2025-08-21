@@ -3,6 +3,7 @@
 import type { z } from 'zod';
 import type { createHotelSchema } from '@/lib/definitions';
 import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Function to create a hotel
 export async function createHotel(values: z.infer<typeof createHotelSchema>) {
@@ -35,7 +36,7 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
       bankBIC: values.bic,
       bankName: values.bankName,
       
-      createdAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
     };
 
     const docRef = await adminDb.collection('hotels').add(hotelData);
