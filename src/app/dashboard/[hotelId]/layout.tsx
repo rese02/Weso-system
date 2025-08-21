@@ -6,7 +6,7 @@ import {
   PlusCircle,
   ArrowLeft,
 } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator } from "@/components/ui/sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { getHotelById } from "@/lib/actions/hotel.actions";
 
@@ -55,7 +55,7 @@ export default async function HotelierLayout({
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                 <SidebarMenu.Separator className="my-2" />
+                 <SidebarSeparator className="my-2" />
                  <SidebarMenuItem>
                   <SidebarMenuButton href="/admin" tooltip="Back to Agency">
                     <ArrowLeft />
