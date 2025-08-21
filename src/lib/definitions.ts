@@ -4,10 +4,9 @@ import { z } from 'zod';
 export type Hotel = {
   id: string;
   name: string;
-  address: string;
   city: string;
   country: string;
-  createdAt: Date;
+  bookings: number; // Added to match getHotels return type
 };
 
 export type Guest = {
