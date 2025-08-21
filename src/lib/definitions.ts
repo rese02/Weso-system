@@ -62,6 +62,11 @@ export const createHotelSchema = z.object({
   bankName: z.string(),
 });
 
+export const hotelLoginSchema = z.object({
+  email: z.string().email({ message: "Bitte geben Sie eine gültige E-Mail-Adresse ein." }),
+  password: z.string().min(1, { message: "Bitte geben Sie Ihr Passwort ein." }),
+});
+
 
 export const securityAdvisorSchema = z.object({
   hotelName: z.string().min(1, "Hotel Name is required"),
