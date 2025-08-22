@@ -37,29 +37,22 @@ export default async function HotelierLayout({
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href={`/dashboard/${params.hotelId}/bookings`} tooltip="Bookings">
-                    <BedDouble />
-                    <span>Bookings</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
                  <SidebarMenuItem>
-                  <SidebarMenuButton href={`/dashboard/${params.hotelId}/bookings/create-booking`} tooltip="Create Booking">
+                  <SidebarMenuButton href={`/dashboard/${params.hotelId}/bookings/create-booking`} tooltip="Neue Buchung">
                     <PlusCircle />
-                    <span>Create Booking</span>
+                    <span>Neue Buchung</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton href={`/dashboard/${params.hotelId}/settings`} tooltip="Settings">
-                    <Settings />
-                    <span>Settings</span>
+                  <SidebarMenuButton href={`/dashboard/${params.hotelId}/bookings`} tooltip="Buchungen">
+                    <BedDouble />
+                    <span>Buchungen</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                 <SidebarSeparator className="my-2" />
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/admin" tooltip="Back to Agency">
-                    <ArrowLeft />
-                    <span>Back to Agency</span>
+                <SidebarMenuItem>
+                  <SidebarMenuButton href={`/dashboard/${params.hotelId}/settings`} tooltip="Einstellungen">
+                    <Settings />
+                    <span>Einstellungen</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -68,7 +61,7 @@ export default async function HotelierLayout({
         </Sidebar>
         <div className="flex flex-1 flex-col">
             <DashboardHeader 
-              title="Hotelier Dashboard"
+              title="Hotel Dashboard"
               user={{ name: hotel.name, email: "manager@hotel.com" }}
             />
             <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">

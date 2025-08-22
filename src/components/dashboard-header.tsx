@@ -1,6 +1,6 @@
 'use client';
 
-import { Building, LogOut, User, Settings } from 'lucide-react';
+import { LogOut, User, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type DashboardHeaderProps = {
   title: string;
@@ -22,6 +23,14 @@ type DashboardHeaderProps = {
 };
 
 export function DashboardHeader({ title, user }: DashboardHeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // In a real app, you would also clear any session cookies or tokens
+    router.push('/hotel/login');
+  };
+
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <h1 className="font-headline text-2xl font-semibold text-primary">{title}</h1>
@@ -50,11 +59,9 @@ export function DashboardHeader({ title, user }: DashboardHeaderProps) {
             <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/hotel/login">
+          <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
-            </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

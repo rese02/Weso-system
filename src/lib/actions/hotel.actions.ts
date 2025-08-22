@@ -116,3 +116,26 @@ export async function getHotelById(hotelId: string) {
        }
     }
 }
+
+// Placeholder to get the dashboard data for a hotel
+export async function getHotelDashboardData(hotelId: string) {
+    console.log(`Fetching dashboard data for hotel ${hotelId}...`);
+    // In a real app, this would fetch real data from Firestore
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return {
+        hotelName: "Hotel Sonnenalp",
+        stats: {
+            totalRevenue: "125.450,89",
+            totalBookings: 152,
+            confirmedBookings: 141,
+            pendingActions: 3,
+        },
+        recentActivities: [
+            { id: "BPXMTR", description: "Buchung für Nawaf Safar wurde zuletzt aktualisiert. Status: Confirmed", timestamp: "vor 5 Min." },
+            { id: "RVBEMD", description: "Buchung für Daniela Varnero wurde zuletzt aktualisiert. Status: Confirmed", timestamp: "vor 1 Std." },
+            { id: "BBZGVD", description: "Buchung für Khalid AlKhozai wurde zuletzt aktualisiert. Status: Confirmed", timestamp: "vor 3 Std." },
+             { id: "XYZABC", description: "Neue Buchung von Max Mustermann erstellt.", timestamp: "vor 5 Std." },
+        ]
+    }
+}
