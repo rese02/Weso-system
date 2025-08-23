@@ -7,11 +7,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, MoreHorizontal } from 'lucide-react';
 import { getBookingsByHotel } from '@/lib/actions/booking.actions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { format } from 'date-fns';
 
 export default async function BookingsPage({ params }: { params: { hotelId: string } }) {
   const bookings = await getBookingsByHotel(params.hotelId);
@@ -20,7 +22,7 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
     switch (status) {
       case 'confirmed':
         return 'default';
-      case 'pending':
+      case 'pending_guest':
         return 'secondary';
       case 'cancelled':
         return 'destructive';
@@ -44,51 +46,64 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
         </Button>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Guest Name</TableHead>
-              <TableHead>Room Type</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead>Check-out</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bookings.map((booking) => (
-              <TableRow key={booking.id}>
-                <TableCell className="font-medium">{booking.guestName}</TableCell>
-                <TableCell>{booking.room}</TableCell>
-                <TableCell>{booking.checkIn}</TableCell>
-                <TableCell>{booking.checkOut}</TableCell>
-                <TableCell>
-                  <Badge variant={getBadgeVariant(booking.status)} className="capitalize">{booking.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}`}>View Details</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}/edit`}>Edit Booking</Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Bookings</CardTitle>
+          <CardDescription>A list of all bookings for this hotel.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Guest Name</TableHead>
+                <TableHead>Room Type</TableHead>
+                <TableHead>Check-in</TableHead>
+                <TableHead>Check-out</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {bookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No bookings found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                bookings.map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell className="font-medium">{booking.guestDetails ? `${booking.guestDetails.firstName} ${booking.guestDetails.lastName}` : booking.guestName}</TableCell>
+                  <TableCell>{booking.roomType}</TableCell>
+                  <TableCell>{format(new Date(booking.checkInDate), 'dd MMM yyyy')}</TableCell>
+                  <TableCell>{format(new Date(booking.checkOutDate), 'dd MMM yyyy')}</TableCell>
+                  <TableCell>
+                    <Badge variant={getBadgeVariant(booking.status)} className="capitalize">{booking.status.replace('_', ' ')}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}`}>View Details</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}/edit`}>Edit Booking</Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              )))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

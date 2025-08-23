@@ -4,9 +4,12 @@ import { z } from 'zod';
 export type Hotel = {
   id: string;
   name: string;
+  address: string;
+  city: string;
+  country: string;
   domain: string;
-  bookings: number;
-  status: 'active' | 'inactive';
+  bookings?: number; // Optional for display purposes
+  status?: 'active' | 'inactive'; // Optional for display purposes
 };
 
 export type Guest = {
@@ -25,9 +28,11 @@ export type Booking = {
   checkInDate: Date;
   checkOutDate: Date;
   roomType: string;
-  status: 'pending_guest' | 'confirmed' | 'cancelled';
+  status: 'pending_guest' | 'confirmed' | 'cancelled' | 'archived';
   guestLinkId: string;
   createdAt: Date;
+  updatedAt?: Date;
+  guestDetails?: Guest;
 };
 
 export type GuestLink = {
@@ -40,7 +45,7 @@ export type GuestLink = {
 };
 
 export type BookingDataForGuest = {
-    hotel: any;
+    hotel: Hotel;
     booking: Booking;
 }
 

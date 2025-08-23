@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
@@ -19,49 +19,53 @@ import { User, FileUp, CreditCard, PartyPopper, Loader2, Hotel } from 'lucide-re
 import { format } from 'date-fns';
 
 const steps = [
-  { id: 0, title: 'Personal Details', icon: User, schema: guestDetailsSchema },
-  { id: 1, title: 'Document Upload', icon: FileUp, schema: documentUploadSchema },
-  { id: 2, title: 'Payment Proof', icon: CreditCard, schema: paymentProofSchema },
-  { id: 3, title: 'Review & Submit', icon: PartyPopper, schema: z.object({}) },
+  { id: 'details', title: 'Personal Details', icon: User, schema: guestDetailsSchema },
+  { id: 'documents', title: 'Document Upload', icon: FileUp, schema: documentUploadSchema },
+  { id: 'payment', title: 'Payment Proof', icon: CreditCard, schema: paymentProofSchema },
+  { id: 'review', title: 'Review & Submit', icon: PartyPopper, schema: z.object({}) },
 ];
 
 type FormData = z.infer<typeof guestDetailsSchema> & 
-                Partial<z.infer<typeof documentUploadSchema>> & 
-                Partial<z.infer<typeof paymentProofSchema>>;
+                z.infer<typeof documentUploadSchema> & 
+                z.infer<typeof paymentProofSchema>;
 
 export function BookingForm({ linkId, initialData }: { linkId: string; initialData: BookingDataForGuest }) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>(() => {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [formData, setFormData] = useState<Partial<FormData>>(() => {
     const guestNameParts = initialData.booking.guestName.split(' ');
     return {
-        firstName: guestNameParts[0] || '',
-        lastName: guestNameParts.slice(1).join(' ') || '',
-        email: '',
-        phone: '',
+      firstName: guestNameParts[0] || '',
+      lastName: guestNameParts.slice(1).join(' ') || '',
+      email: '',
+      phone: '',
+      documentUrl: '',
+      paymentProofUrl: '',
     };
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
+  const currentStep = steps[currentStepIndex];
+  
   const form = useForm({
-    resolver: zodResolver(steps[currentStep].schema),
+    resolver: zodResolver(currentStep.schema),
     values: formData,
     mode: 'onChange'
   });
-  
-  // Watch for changes and update the main state
-  const watchedValues = form.watch();
-  useState(() => {
-    setFormData(prev => ({ ...prev, ...watchedValues }));
-  }, [watchedValues]);
 
-  const processForm = (data: any) => {
-    setFormData(prev => ({ ...prev!, ...data }));
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+  useEffect(() => {
+    form.reset(formData);
+  }, [currentStepIndex, formData, form]);
+
+  const processForm = async (data: Partial<FormData>) => {
+    const updatedData = { ...formData, ...data };
+    setFormData(updatedData);
+
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
     } else {
-      handleSubmit({ ...formData!, ...data });
+      await handleSubmit(updatedData as FormData);
     }
   };
   
@@ -82,8 +86,14 @@ export function BookingForm({ linkId, initialData }: { linkId: string; initialDa
     }
   }
 
-  const progress = ((currentStep + 1) / steps.length) * 100;
-  const CurrentStepIcon = steps[currentStep].icon;
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+    }
+  };
+
+  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+  const CurrentStepIcon = currentStep.icon;
   
   return (
     <>
@@ -97,7 +107,7 @@ export function BookingForm({ linkId, initialData }: { linkId: string; initialDa
             <CardDescription>Follow the steps below to finalize your reservation.</CardDescription>
             <div className="flex items-center gap-4 pt-4">
                 <Progress value={progress} className="h-2" />
-                <span className="text-sm font-semibold text-muted-foreground">{currentStep + 1} / {steps.length}</span>
+                <span className="text-sm font-semibold text-muted-foreground">{currentStepIndex + 1} / {steps.length}</span>
             </div>
         </CardHeader>
         <CardContent>
@@ -105,12 +115,12 @@ export function BookingForm({ linkId, initialData }: { linkId: string; initialDa
                 <div className="rounded-full bg-primary p-3 text-primary-foreground">
                     <CurrentStepIcon className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-semibold">{steps[currentStep].title}</h3>
+                <h3 className="text-xl font-semibold">{currentStep.title}</h3>
             </div>
             
             <Form {...form}>
             <form onSubmit={form.handleSubmit(processForm)} className="space-y-6">
-                {currentStep === 0 && (
+                {currentStep.id === 'details' && (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="firstName" render={({ field }) => (
@@ -128,21 +138,21 @@ export function BookingForm({ linkId, initialData }: { linkId: string; initialDa
                     )} />
                 </>
                 )}
-                {currentStep === 1 && (
+                {currentStep.id === 'documents' && (
                 <div className="text-center space-y-4 p-4 border-dashed border-2 rounded-lg">
                     <FileUp className="mx-auto h-12 w-12 text-muted-foreground"/>
                     <p className="text-muted-foreground">This is a placeholder for a document uploader. Click "Continue" to simulate upload.</p>
                     <Button type="button" onClick={() => form.setValue('documentUrl', 'https://placehold.co/file.pdf', { shouldValidate: true })}>Simulate Upload</Button>
                 </div>
                 )}
-                {currentStep === 2 && (
+                {currentStep.id === 'payment' && (
                 <div className="text-center space-y-4 p-4 border-dashed border-2 rounded-lg">
                     <CreditCard className="mx-auto h-12 w-12 text-muted-foreground"/>
                     <p className="text-muted-foreground">This is a placeholder for payment proof uploader. Click "Continue" to simulate upload.</p>
                     <Button type="button" onClick={() => form.setValue('paymentProofUrl', 'https://placehold.co/payment.jpg', { shouldValidate: true })}>Simulate Upload</Button>
                 </div>
                 )}
-                {currentStep === 3 && formData && initialData.booking.checkInDate && (
+                {currentStep.id === 'review' && initialData.booking.checkInDate && (
                     <div className="space-y-4 rounded-lg border bg-secondary/50 p-4">
                         <h4 className="font-bold">Review Your Information</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -158,18 +168,18 @@ export function BookingForm({ linkId, initialData }: { linkId: string; initialDa
                         <p className="text-sm text-muted-foreground pt-4">By submitting, you agree to our terms and conditions.</p>
                     </div>
                 )}
+                 <CardFooter className="flex justify-between p-0 pt-6">
+                    <Button type="button" variant="outline" onClick={handleBack} disabled={currentStepIndex === 0 || isSubmitting}>
+                    Back
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting || !form.formState.isValid} className="h-12 px-8">
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {currentStep.id === 'review' ? 'Submit Booking' : 'Continue'}
+                    </Button>
+                </CardFooter>
             </form>
             </Form>
         </CardContent>
-        <CardFooter className="flex justify-between">
-            <Button type="button" variant="outline" onClick={() => setCurrentStep(currentStep - 1)} disabled={currentStep === 0 || isSubmitting}>
-            Back
-            </Button>
-            <Button type="button" onClick={form.handleSubmit(processForm)} disabled={isSubmitting || !form.formState.isValid} className="h-12 px-8">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {currentStep === steps.length - 1 ? 'Submit Booking' : 'Continue'}
-            </Button>
-        </CardFooter>
         </Card>
     </>
   );

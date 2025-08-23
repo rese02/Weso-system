@@ -47,8 +47,8 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
         id: bookingRef.id,
         hotelId: hotelId,
         guestName: values.guestName,
-        checkInDate: values.checkInDate,
-        checkOutDate: values.checkOutDate,
+        checkInDate: Timestamp.fromDate(values.checkInDate),
+        checkOutDate: Timestamp.fromDate(values.checkOutDate),
         roomType: values.roomType,
         status: 'pending_guest',
         guestLinkId: guestLinkRef.id,
@@ -82,33 +82,47 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
 // Placeholder to get bookings for a specific hotel
 export async function getBookingsByHotel(hotelId: string) {
     console.log(`Fetching bookings for hotel ${hotelId}...`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (hotelId === 'hotel-sonnenalp') {
-      return [
-        { id: 'booking-101', guestName: 'Alice Johnson', checkIn: '2024-08-15', checkOut: '2024-08-20', status: 'confirmed', room: 'Deluxe Suite' },
-        { id: 'booking-102', guestName: 'Bob Williams', checkIn: '2024-08-16', checkOut: '2024-08-18', status: 'pending_guest', room: 'Standard Room' },
-        { id: 'booking-103', guestName: 'Charlie Brown', checkIn: '2024-09-01', checkOut: '2024-09-05', status: 'confirmed', room: 'Ocean View King' },
-        { id: 'booking-104', guestName: 'Diana Prince', checkIn: '2024-09-10', checkOut: '2024-09-15', status: 'cancelled', room: 'Presidential Suite' },
-      ]
+    if (!adminDb) {
+      console.error("Firestore not initialized for getBookingsByHotel.");
+      return [];
     }
-    
-    return [];
+
+    try {
+        const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
+        const snapshot = await bookingsRef.orderBy('checkInDate', 'desc').get();
+        
+        if (snapshot.empty) {
+            return [];
+        }
+
+        const bookings = snapshot.docs.map(doc => convertTimestampsToDates(doc.data()));
+        return bookings;
+
+    } catch (error) {
+        console.error(`Error fetching bookings for hotel ${hotelId}: `, error);
+        return [];
+    }
 }
 
 // Placeholder to get details for a single booking
 export async function getBookingDetails(bookingId: string) {
     console.log(`Fetching details for booking ${bookingId}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-        id: bookingId,
-        hotelId: 'hotel-sonnenalp',
-        guestName: 'Alice Johnson',
-        checkInDate: new Date('2024-08-15'),
-        checkOutDate: new Date('2024-08-20'),
-        roomType: 'Deluxe Suite',
-        status: 'confirmed'
+    if (!adminDb) {
+      console.error("Firestore not initialized for getBookingDetails.");
+      return null;
     }
+
+    // This is not scalable. In a real app, you would have the hotelId.
+    const bookingsRef = adminDb.collectionGroup('bookings').where('id', '==', bookingId);
+    const snapshot = await bookingsRef.get();
+    
+    if (snapshot.empty) {
+        console.warn(`Booking with id ${bookingId} not found.`);
+        return null;
+    }
+
+    const bookingDoc = snapshot.docs[0];
+    return convertTimestampsToDates(bookingDoc.data());
 }
 
 // Function for guest to submit their completed booking form
@@ -245,13 +259,16 @@ export async function getBookingDataForGuest(linkId: string) {
         }
 
         console.log(`[Action: getBookingDataForGuest] SUCCESS for linkId: ${linkId}`);
-        return {
+        const result = {
             success: true,
             data: {
                 hotel: convertTimestampsToDates(hotelDoc.data()),
                 booking: convertTimestampsToDates(bookingDoc.data()),
             }
         };
+        // @ts-ignore
+        return JSON.parse(JSON.stringify(result));
+
     } catch (error) {
         console.error(`[Action: getBookingDataForGuest] FATAL ERROR for linkId ${linkId}:`, error);
         return { success: false, message: 'An unexpected server error occurred.' };

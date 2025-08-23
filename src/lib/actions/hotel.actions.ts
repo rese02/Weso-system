@@ -18,10 +18,10 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
     return { success: false, message: 'Server configuration error.' };
   }
 
-  try {
-    const hotelRef = adminDb.collection('hotels').doc();
-    const hotelId = hotelRef.id;
+  const hotelRef = adminDb.collection('hotels').doc();
+  const hotelId = hotelRef.id;
 
+  try {
     // --- 1. Create Firebase Auth User (conceptual) ---
     // In a real app, this would be:
     // const userRecord = await adminAuth.createUser({
@@ -44,6 +44,7 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
     
     // --- 3. Create Firestore Documents ---
     const hotelData = {
+      id: hotelId,
       agencyId: "agency_weso_systems",
       name: values.hotelName,
       domain: values.domain || `${values.hotelName.toLowerCase().replace(/\s+/g, '-')}.weso.app`,
@@ -52,7 +53,7 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
       ownerUid: hotelierUid,
       contactEmail: values.contactEmail,
       contactPhone: values.contactPhone,
-      contactAddress: values.fullAddress,
+      address: values.fullAddress,
       boardTypes: values.meals,
       roomCategories: values.roomCategories.map(c => c.name),
       bankAccountHolder: values.bankAccountHolder,
@@ -92,24 +93,37 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
 // Function to fetch all hotels for the agency
 export async function getHotels() {
   console.log('Fetching all hotels...');
-  // --- TEMPORARY TEST DATA ---
-  const testHotels = [
-    {
-      id: 'hotel-sonnenalp',
-      name: 'Hotel Sonnenalp',
-      domain: 'hotel-sonnenalp.de',
-      bookings: 128,
-      status: 'active'
-    },
-    {
-      id: 'seehotel-traum',
-      name: 'Seehotel Traum',
-      domain: 'seehotel-traum.de',
-      bookings: 74,
-      status: 'active'
+   if (!adminDb) {
+    console.error("Firestore not initialized for getHotels.");
+    return [];
+  }
+  
+  try {
+    // In a real app, you would filter by agencyId
+    const hotelsSnapshot = await adminDb.collection('hotels').orderBy('name').get();
+    if (hotelsSnapshot.empty) {
+      return [];
     }
-  ];
-  return testHotels;
+
+    const hotels = await Promise.all(hotelsSnapshot.docs.map(async (doc) => {
+      const hotelData = doc.data();
+      const bookingsSnapshot = await doc.ref.collection('bookings').count().get();
+      const bookingsCount = bookingsSnapshot.data().count;
+      
+      return {
+        id: doc.id,
+        name: hotelData.name,
+        domain: hotelData.domain,
+        bookings: bookingsCount,
+        status: 'active' // Placeholder status
+      };
+    }));
+    
+    return hotels;
+  } catch (error) {
+    console.error("Error fetching hotels: ", error);
+    return [];
+  }
 }
 
 // Get a single hotel's data by its ID
@@ -117,26 +131,27 @@ export async function getHotelById(hotelId: string) {
     console.log(`Fetching hotel ${hotelId}...`);
     if (!adminDb) {
       console.error("Firestore not initialized.");
-      return { id: hotelId, name: `Error: Hotel ${hotelId} not found`, address: '', city: '', country: '' };
+      return { id: hotelId, name: `Error: Hotel ${hotelId} not found`, address: '', city: '', country: '', domain:'' };
     }
     try {
       const hotelDoc = await adminDb.collection('hotels').doc(hotelId).get();
       if (!hotelDoc.exists) {
         console.warn(`Hotel with id ${hotelId} not found.`);
-        return { id: hotelId, name: `Hotel ${hotelId} Not Found`, address: '', city: '', country: '' };
+        return { id: hotelId, name: `Hotel ${hotelId} Not Found`, address: '', city: '', country: '', domain:'' };
       }
       const data = hotelDoc.data()!;
-      const addressParts = (data.contactAddress || '').split(',');
+      const addressParts = (data.address || '').split(',');
       return {
           id: hotelDoc.id,
           name: data.name || `Hotel ${hotelId}`,
-          address: data.contactAddress || 'N/A',
+          address: data.address || 'N/A',
           city: addressParts[1]?.trim() || 'N/A',
-          country: addressParts[2]?.trim() || 'N/A'
+          country: addressParts[2]?.trim() || 'N/A',
+          domain: data.domain
       };
     } catch (error) {
        console.error(`Error fetching hotel by ID ${hotelId}: `, error);
-       return { id: hotelId, name: `Error loading hotel`, address: '', city: '', country: '' };
+       return { id: hotelId, name: `Error loading hotel`, address: '', city: '', country: '', domain:'' };
     }
 }
 
@@ -145,21 +160,52 @@ export async function getHotelById(hotelId: string) {
 export async function getHotelDashboardData(hotelId: string) {
     console.log(`Fetching dashboard data for hotel ${hotelId}...`);
     const hotelDetails = await getHotelById(hotelId);
-    await new Promise(resolve => setTimeout(resolve, 500));
+     if (!adminDb) {
+        return {
+            hotelName: hotelDetails.name,
+            stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
+            recentActivities: []
+        }
+    }
+    
+    const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
+    const bookingsSnapshot = await bookingsRef.get();
+
+    let totalBookings = 0;
+    let confirmedBookings = 0;
+    let pendingActions = 0;
+
+    bookingsSnapshot.forEach(doc => {
+        const booking = doc.data();
+        totalBookings++;
+        if (booking.status === 'confirmed') {
+            confirmedBookings++;
+        }
+        if (booking.status === 'pending_guest') {
+            pendingActions++;
+        }
+    });
+
+    const recentActivitiesSnapshot = await bookingsRef.orderBy('createdAt', 'desc').limit(5).get();
+    const recentActivities = recentActivitiesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        const guestName = data.guestDetails ? `${data.guestDetails.firstName} ${data.guestDetails.lastName}` : data.guestName;
+        return {
+            id: doc.id.substring(0,6).toUpperCase(),
+            description: `Booking for ${guestName} was updated. Status: ${data.status}`,
+            timestamp: `some time ago` // In real app use formatDistanceToNow
+        }
+    });
+
 
     return {
         hotelName: hotelDetails.name,
         stats: {
-            totalRevenue: "125.450,89",
-            totalBookings: 152,
-            confirmedBookings: 141,
-            pendingActions: 3,
+            totalRevenue: "0", // Revenue calculation would require price data
+            totalBookings: totalBookings,
+            confirmedBookings: confirmedBookings,
+            pendingActions: pendingActions,
         },
-        recentActivities: [
-            { id: "BPXMTR", description: "Buchung für Nawaf Safar wurde zuletzt aktualisiert. Status: Confirmed", timestamp: "vor 5 Min." },
-            { id: "RVBEMD", description: "Buchung für Daniela Varnero wurde zuletzt aktualisiert. Status: Confirmed", timestamp: "vor 1 Std." },
-            { id: "BBZGVD", description: "Buchung für Khalid AlKhozai wurde zuletzt aktualisiert. Status: Confirmed", timestamp: "vor 3 Std." },
-             { id: "XYZABC", description: "Neue Buchung von Max Mustermann erstellt.", timestamp: "vor 5 Std." },
-        ]
+        recentActivities: recentActivities
     }
 }
