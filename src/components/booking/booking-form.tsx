@@ -70,14 +70,16 @@ export function BookingForm({ linkId }: { linkId: string }) {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      handleSubmit();
+      // This is the final step, call the main submit handler
+      // We pass the latest form data combined with previous steps
+      handleSubmit({ ...formData!, ...data });
     }
   };
   
-  const handleSubmit = async () => {
-    if (!formData) return;
+  const handleSubmit = async (finalFormData: FormData) => {
+    if (!finalFormData) return;
     setIsSubmitting(true);
-    const result = await submitGuestBooking(linkId, formData);
+    const result = await submitGuestBooking(linkId, finalFormData);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -173,8 +175,8 @@ export function BookingForm({ linkId }: { linkId: string }) {
                         <div><p><strong>Full Name:</strong> {formData.firstName} {formData.lastName}</p></div>
                         <div><p><strong>Email:</strong> {formData.email}</p></div>
                         <div><p><strong>Phone:</strong> {formData.phone}</p></div>
-                        <div><p><strong>Check-in:</strong> {format(new Date(bookingDetails.booking.checkInDate), 'PPP')}</p></div>
-                        <div><p><strong>Check-out:</strong> {format(new Date(bookingDetails.booking.checkOutDate), 'PPP')}</p></div>
+                        <div><p><strong>Check-in:</strong> {format(bookingDetails.booking.checkInDate, 'PPP')}</p></div>
+                        <div><p><strong>Check-out:</strong> {format(bookingDetails.booking.checkOutDate, 'PPP')}</p></div>
                         <div><p><strong>Room:</strong> {bookingDetails.booking.roomType}</p></div>
                         <div><p><strong>Document:</strong> {formData.documentUrl ? 'Uploaded' : 'Not Uploaded'}</p></div>
                         <div><p><strong>Payment Proof:</strong> {formData.paymentProofUrl ? 'Uploaded' : 'Not Uploaded'}</p></div>

@@ -32,9 +32,9 @@ function convertTimestampsToDates(obj: any): any {
 
 // Function to create a new booking and generate a guest link
 export async function createBookingLink(hotelId: string, values: z.infer<typeof createBookingSchema>) {
-  console.log(`Creating booking for hotel ${hotelId} with values:`, values);
+  console.log(`[Action: createBookingLink] START for hotel ${hotelId}`, values);
   if (!adminDb) {
-    console.error("Firestore not initialized.");
+    console.error("[Action: createBookingLink] Firestore not initialized.");
     return { success: false, message: 'Server configuration error.' };
   }
 
@@ -58,11 +58,11 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
     const guestLinkData = {
         id: guestLinkRef.id,
         bookingId: bookingRef.id,
-        hotelId: hotelId,
+        hotelId: hotelId, // Storing hotelId for secure verification
         isCompleted: false,
         createdAt: FieldValue.serverTimestamp(),
-        // expiresAt can also be set here
     }
+    console.log(`[Action: createBookingLink] Writing to Firestore. Booking Path: ${bookingRef.path}, Link Path: ${guestLinkRef.path}`);
 
     // Use a batch write to ensure atomicity
     const batch = adminDb.batch();
@@ -71,10 +71,11 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
     
     await batch.commit();
 
+    console.log(`[Action: createBookingLink] SUCCESS. Generated link: /guest/${guestLinkRef.id}`);
     return { success: true, message: 'Booking link created!', link: `/guest/${guestLinkRef.id}` };
   } catch (error) {
-    console.error("Error creating booking link: ", error);
-    return { success: false, message: 'Failed to create booking link.' };
+    console.error("[Action: createBookingLink] FATAL ERROR: ", error);
+    return { success: false, message: 'Failed to create booking link due to a server error.' };
   }
 }
 
@@ -112,9 +113,9 @@ export async function getBookingDetails(bookingId: string) {
 
 // Function for guest to submit their completed booking form
 export async function submitGuestBooking(linkId: string, formData: any) {
-  console.log(`Submitting form for link ${linkId} with data:`, formData);
+  console.log(`[Action: submitGuestBooking] START for linkId: ${linkId}`);
   if (!adminDb) {
-    console.error("Firestore not initialized.");
+    console.error("[Action: submitGuestBooking] Firestore not initialized.");
     return { success: false, message: 'Server configuration error.' };
   }
   
@@ -123,28 +124,35 @@ export async function submitGuestBooking(linkId: string, formData: any) {
   try {
     const linkDoc = await guestLinkRef.get();
     if (!linkDoc.exists) {
+      console.warn(`[Action: submitGuestBooking] Invalid linkId provided: ${linkId}`);
       return { success: false, message: 'This booking link is invalid or has expired.' };
     }
     
     const linkData = linkDoc.data();
     if (linkData?.isCompleted) {
+       console.warn(`[Action: submitGuestBooking] Booking already completed for linkId: ${linkId}`);
        return { success: false, message: 'This booking has already been completed.' };
     }
 
+    // Securely get hotelId and bookingId from the trusted server-side document
     const { hotelId, bookingId } = linkData as { hotelId: string; bookingId: string; };
 
     const hotelRef = adminDb.collection('hotels').doc(hotelId);
     const bookingRef = hotelRef.collection('bookings').doc(bookingId);
     
+    console.log(`[Action: submitGuestBooking] Verified Paths. Hotel: ${hotelRef.path}, Booking: ${bookingRef.path}`);
+
     const hotelDoc = await hotelRef.get();
     const bookingDoc = await bookingRef.get();
 
     if (!hotelDoc.exists || !bookingDoc.exists) {
+        console.error(`[Action: submitGuestBooking] Mismatch: Hotel or Booking not found. Hotel exists: ${hotelDoc.exists}, Booking exists: ${bookingDoc.exists}`);
         return { success: false, message: 'Could not find the associated hotel or booking.' };
     }
 
     const hotelData = hotelDoc.data();
-    const bookingData = bookingDoc.data();
+    const bookingData = convertTimestampsToDates(bookingDoc.data());
+    
     if (!bookingData) {
         return { success: false, message: 'Booking data is missing.' };
     }
@@ -168,15 +176,17 @@ export async function submitGuestBooking(linkId: string, formData: any) {
     // Update documents in a batch
     const batch = adminDb.batch();
     batch.update(bookingRef, bookingUpdateData);
-    batch.update(guestLinkRef, { isCompleted: true });
+    batch.update(guestLinkRef, { isCompleted: true, completedAt: FieldValue.serverTimestamp() });
     await batch.commit();
+
+    console.log(`[Action: submitGuestBooking] SUCCESS. Booking ${bookingId} confirmed.`);
 
     // --- AI Email Generation ---
     const emailInput = {
       guestName: `${formData.firstName} ${formData.lastName}`,
       hotelName: hotelData?.name || 'Your Hotel',
-      checkInDate: format(bookingData.checkInDate.toDate(), 'PPP'),
-      checkOutDate: format(bookingData.checkOutDate.toDate(), 'PPP'),
+      checkInDate: format(bookingData.checkInDate, 'PPP'),
+      checkOutDate: format(bookingData.checkOutDate, 'PPP'),
       bookingDetails: `1x ${bookingData.roomType}`,
     };
   
@@ -187,15 +197,16 @@ export async function submitGuestBooking(linkId: string, formData: any) {
         subject: `Your Booking at ${hotelData?.name} is Confirmed!`, 
         html: emailResult.htmlContent 
       });
+      console.log(`[Action: submitGuestBooking] Confirmation email dispatch simulated for ${formData.email}.`);
     } catch (error) {
-      console.error("Failed to generate or send email:", error);
+      console.error("[Action: submitGuestBooking] Failed to generate or send email:", error);
       // Don't fail the whole process if email fails, just log it.
     }
 
     return { success: true, message: 'Booking completed successfully!' };
 
   } catch (error) {
-    console.error("Error submitting guest booking:", error);
+    console.error(`[Action: submitGuestBooking] FATAL ERROR for linkId ${linkId}:`, error);
     return { success: false, message: 'An unexpected error occurred while submitting your booking.' };
   }
 }
@@ -213,14 +224,14 @@ export async function getBookingDataForGuest(linkId: string) {
         return { success: false, message: 'Invalid booking link.' };
     }
 
-    const { hotelId, bookingId, isCompleted } = linkDoc.data() as { hotelId: string, bookingId: string, isCompleted: boolean };
+    const linkData = linkDoc.data() as { hotelId: string, bookingId: string, isCompleted: boolean };
 
-     if (isCompleted) {
-       return { success: false, message: 'Booking already completed.' };
+     if (linkData.isCompleted) {
+       return { success: false, message: 'This booking has already been completed.' };
     }
 
-    const hotelDoc = await adminDb.collection('hotels').doc(hotelId).get();
-    const bookingDoc = await adminDb.collection('bookings').doc(bookingId).get();
+    const hotelDoc = await adminDb.collection('hotels').doc(linkData.hotelId).get();
+    const bookingDoc = await adminDb.collection('bookings').doc(linkData.bookingId).get();
     
     if (!hotelDoc.exists || !bookingDoc.exists) {
         return { success: false, message: 'Could not find hotel or booking.' };

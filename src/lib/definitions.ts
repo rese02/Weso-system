@@ -33,8 +33,9 @@ export type GuestLink = {
     id: string;
     bookingId: string;
     hotelId: string;
-    expiresAt: Date;
     isCompleted: boolean;
+    createdAt: Date;
+    expiresAt?: Date;
 };
 
 // Zod Schemas for validation
