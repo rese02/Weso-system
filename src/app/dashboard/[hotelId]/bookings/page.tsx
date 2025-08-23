@@ -115,11 +115,11 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
                         </TableCell>
                         <TableCell className="text-right pr-4">
                             <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                                     <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}`}><Eye className="h-4 w-4" /></Link>
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}/edit`}><Copy className="h-4 w-4" /></Link>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                    <Link href={`/guest/${booking.guestLinkId}`} target="_blank" rel="noopener noreferrer"><Copy className="h-4 w-4" /></Link>
                                 </Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
