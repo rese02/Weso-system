@@ -1,73 +1,155 @@
 
 'use server';
 
-import type { z as Zod } from 'zod';
+// Server-side Firebase Admin actions for hotel creation + seeding
+
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { format } from 'date-fns';
-import type { Hotel, createHotelSchema as CreateHotelZodSchema } from '@/lib/definitions';
+import type { createHotelSchema } from '@/lib/definitions';
+import { z } from 'zod';
 
+const CreateHotelServerSchema = z.object({
+  hotelName: z.string().min(3),
+  domain: z.string().optional(),
+  hotelierEmail: z.string().email(),
+  hotelierPassword: z.string().min(8),
+  contactEmail: z.string().email(),
+  contactPhone: z.string(),
+  fullAddress: z.string().min(10),
+  meals: z.array(z.string()),
+  roomCategories: z.array(z.object({ name: z.string().min(2) })).min(1),
+  bankAccountHolder: z.string(),
+  iban: z.string(),
+  bic: z.string(),
+  bankName: z.string(),
+  ownerId: z.string().min(1), // Added ownerId
+});
 
-// This is the new, more robust createHotel action based on user feedback.
-// The old `createHotel` function that took form values is replaced by this.
-// The front-end form (`create-hotel/page.tsx`) will need to be adapted to call this action
-// with the appropriate, simplified input. For now, we are providing the new backend logic.
-
-export type CreateHotelInput = Zod.infer<typeof CreateHotelZodSchema>;
 
 /**
- * Creates a hotel document, a default wizardConfig, and seeds a default room.
- * - Creates a document in /hotels/{hotelId}
- * - Creates /hotels/{hotelId}/wizardConfig/default
- * - Creates /hotels/{hotelId}/rooms/{roomId} with a default room
+ * Erzeugt ein Hotel-Dokument, legt eine default wizardConfig an und seedet einen Default Room.
+ * - Legt ein Dokument in /hotels/{hotelId}
+ * - Legt /hotels/{hotelId}/wizardConfig/default an
+ * - Legt /hotels/{hotelId}/rooms/{roomId} mit einem Default-Room an
  */
-export async function createHotel(values: CreateHotelInput) {
-    const { db } = getFirebaseAdmin();
-    const hotelRef = db.collection('hotels').doc();
-    const now = FieldValue.serverTimestamp();
+export async function createHotel(values: z.infer<typeof createHotelSchema> & { ownerId: string }) {
+  const parsed = CreateHotelServerSchema.parse(values);
 
-    const hotelDoc = {
-        name: values.hotelName,
-        domain: values.domain,
-        hotelierEmail: values.hotelierEmail,
-        hotelierPassword: values.hotelierPassword, // SECURITY WARNING: Passwords should be hashed in production
-        contactEmail: values.contactEmail,
-        contactPhone: values.contactPhone,
-        address: values.fullAddress,
-        meals: values.meals,
-        roomCategories: values.roomCategories,
-        bankDetails: {
-            accountHolder: values.bankAccountHolder,
-            iban: values.iban,
-            bic: values.bic,
-            bankName: values.bankName,
-        },
-        settings: {
-            allowGuestUploads: true,
-            maxUploadMb: 10,
-            bookingLinkExpiryHours: 48,
-        },
+  const { db } = getFirebaseAdmin();
+  const hotelRef = db.collection('hotels').doc(); 
+  const now = db.FieldValue.serverTimestamp();
+
+  const hotelDoc = {
+    name: parsed.hotelName,
+    domain: parsed.domain,
+    hotelierEmail: parsed.hotelierEmail,
+    hotelierPassword: parsed.hotelierPassword, 
+    contactEmail: parsed.contactEmail,
+    contactPhone: parsed.contactPhone,
+    address: parsed.fullAddress,
+    meals: parsed.meals,
+    roomCategories: parsed.roomCategories,
+    bankDetails: {
+        accountHolder: parsed.bankAccountHolder,
+        iban: parsed.iban,
+        bic: parsed.bic,
+        bankName: parsed.bankName,
+    },
+    ownerId: parsed.ownerId,
+    settings: {
+        allowGuestUploads: true,
+        maxUploadMb: 10,
+        bookingLinkExpiryHours: 48,
+    },
+    createdAt: now,
+    updatedAt: now,
+  };
+    
+  // default wizard steps (leicht anpassbar)
+  const defaultWizard = {
+    createdAt: now,
+    updatedAt: now,
+    steps: [
+      {
+        id: 'guest-info',
+        title: 'Gäste Informationen',
+        description: 'Name, Kontakt & Adresse',
+        inputs: [
+          { key: 'firstName', label: 'Vorname', type: 'text', required: true },
+          { key: 'lastName', label: 'Nachname', type: 'text', required: true },
+          { key: 'email', label: 'E‑Mail', type: 'email', required: true },
+          { key: 'phone', label: 'Telefon', type: 'tel', required: false },
+        ],
+      },
+      {
+        id: 'documents',
+        title: 'Dokumente',
+        description: 'Lade Ausweis/Pass hoch (falls erforderlich)',
+        inputs: [
+          { key: 'id_document', label: 'Ausweis / Reisepass', type: 'file', required: false },
+        ],
+      },
+      {
+        id: 'confirm',
+        title: 'Bestätigung',
+        description: 'Einwilligungen & Check',
+        inputs: [
+          { key: 'consent_gdpr', label: 'Einwilligung zur Datenverarbeitung', type: 'checkbox', required: true },
+        ],
+      },
+    ],
+  } as const;
+
+  // Default room seed
+  const defaultRooms = parsed.roomCategories.map(category => ({
+    title: category.name,
+    description: `Standardmäßig angelegtes Zimmer der Kategorie ${category.name}`,
+    capacity: 2, // Default capacity
+    price: 0, // default, Admin sollte anpassen
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+
+  // Transactional approach: set hotel doc + seed subcollections
+  try {
+    await db.runTransaction(async (tx) => {
+      tx.set(hotelRef, hotelDoc);
+
+      const wizardRef = hotelRef.collection('wizardConfig').doc('default');
+      tx.set(wizardRef, defaultWizard);
+
+      // Seed a room for each category
+      defaultRooms.forEach(room => {
+        const roomRef = hotelRef.collection('rooms').doc();
+        tx.set(roomRef, room);
+      });
+      
+      const bookingTemplateRef = hotelRef.collection('bookingTemplates').doc('default');
+      tx.set(bookingTemplateRef, {
+        title: 'Standard Buchungsvorlage',
+        description: 'Vorlage für neue Buchungen',
         createdAt: now,
         updatedAt: now,
+        template: {
+          allowPartialPayments: false,
+        },
+      });
+    });
+
+    return {
+      success: true,
+      hotelId: hotelRef.id,
+      message: 'Hotel angelegt und mit Default Wizard + Rooms geseedet.',
     };
-    
-    try {
-        await hotelRef.set(hotelDoc);
-        console.log(`[Action: createHotel] Successfully created hotel with ID: ${hotelRef.id}`);
-        return {
-            success: true,
-            hotelId: hotelRef.id,
-            message: 'Hotel wurde erfolgreich angelegt.',
-        };
-    } catch (err) {
-        console.error('[Action: createHotel] Transaction error', err);
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        return {
-            success: false,
-            message: errorMessage,
-        };
-    }
+  } catch (err) {
+    console.error('createHotel transaction error', err);
+    return {
+      success: false,
+      message: (err as Error).message || String(err),
+    };
+  }
 }
+
 
 
 // Function to fetch all hotels for the agency
@@ -83,14 +165,13 @@ export async function getHotels() {
 
         const hotels = await Promise.all(hotelsSnapshot.docs.map(async (doc) => {
             const hotelData = doc.data();
-            // Count bookings in the top-level collection for this hotel
             const bookingsSnapshot = await db.collection('bookings').where('hotelId', '==', doc.id).count().get();
             const bookingsCount = bookingsSnapshot.data().count;
             
             return {
                 ...hotelData,
                 id: doc.id,
-                name: hotelData.name || hotelData.hotelName, // Handle both possible field names
+                name: hotelData.name || hotelData.hotelName,
                 bookings: bookingsCount,
                 status: hotelData.status || 'active',
             };
@@ -116,7 +197,6 @@ export async function getHotelById(hotelId: string): Promise<Hotel | null> {
             return null;
         }
         const hotelData = hotelDoc.data() as Hotel;
-        // Ensure legacy and new structures are handled
         const name = hotelData.name || (hotelData as any).hotelName;
         const address = hotelData.address || (hotelData as any).fullAddress;
 
@@ -130,6 +210,7 @@ export async function getHotelById(hotelId: string): Promise<Hotel | null> {
 
 // Helper function to convert Firestore Timestamps to JS Dates in nested objects
 function convertTimestampsToDates(obj: any): any {
+  const { Timestamp } = require('firebase-admin/firestore');
   if (!obj) return obj;
   if (obj instanceof Timestamp) {
     return obj.toDate();
@@ -153,6 +234,7 @@ function convertTimestampsToDates(obj: any): any {
 export async function getHotelDashboardData(hotelId: string) {
     console.log(`[Action: getHotelDashboardData] Fetching data for hotel ID: ${hotelId}`);
     const { db } = getFirebaseAdmin();
+    const { format } = require('date-fns');
 
     try {
         const hotelDetails = await getHotelById(hotelId);
@@ -195,7 +277,6 @@ export async function getHotelDashboardData(hotelId: string) {
 
     } catch (error) {
         console.error(`[Action: getHotelDashboardData] Error fetching dashboard data for hotel ${hotelId}:`, error);
-        // Return a default structure on error to prevent crashes
         return {
             hotelName: 'Hotel',
             stats: { totalRevenue: "0.00", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
@@ -203,3 +284,5 @@ export async function getHotelDashboardData(hotelId: string) {
         };
     }
 }
+
+    

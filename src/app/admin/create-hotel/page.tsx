@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -56,7 +57,10 @@ export default function CreateHotelPage() {
   });
 
   const onSubmit = async (values: CreateHotelFormValues) => {
-    const result = await createHotel(values);
+    // In a real app, the ownerId would come from the authenticated agency user's session
+    const valuesWithOwner = { ...values, ownerId: 'agency_weso_systems' };
+    
+    const result = await createHotel(valuesWithOwner);
     if (result.success) {
       toast({
         title: "Hotel erfolgreich erstellt!",
@@ -277,3 +281,5 @@ export default function CreateHotelPage() {
     </Card>
   );
 }
+
+    
