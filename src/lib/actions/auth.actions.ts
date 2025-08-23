@@ -22,8 +22,8 @@ export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
     const hotelDoc = snapshot.docs[0];
     const hotelData = hotelDoc.data();
 
-    // SECURITY-HINWEIS: In einer Produktionsanwendung sollten Passwörter niemals im Klartext gespeichert oder verglichen werden.
-    // Verwenden Sie stattdessen eine sichere Hashing-Bibliothek wie bcrypt, um die Passwörter zu hashen und zu vergleichen.
+    // SICHERHEITSHINWEIS: In einer echten Produktionsanwendung sollten Passwörter
+    // niemals im Klartext gespeichert werden. Verwenden Sie stattdessen eine Hashing-Bibliothek wie bcrypt.
     if (hotelData.hotelierPassword === values.password) {
       console.log(`Login successful for hotel ${hotelDoc.id}`);
       return { success: true, message: 'Login successful!', hotelId: hotelDoc.id };
