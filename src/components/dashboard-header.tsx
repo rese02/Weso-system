@@ -37,7 +37,7 @@ export function DashboardHeader({ title, user, userRole }: DashboardHeaderProps)
 
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 w-full">
       <h1 className="font-headline text-2xl font-semibold text-primary">{title}</h1>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
