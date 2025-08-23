@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
                             <TableCell className="text-muted-foreground hidden sm:table-cell">{hotel.domain}</TableCell>
                             <TableCell className="hidden md:table-cell">{hotel.bookings}</TableCell>
                             <TableCell>
-                                <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'active' ? 'bg-accent text-accent-foreground' : ''}>
+                                <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'active' ? 'bg-green-100 text-green-800' : ''}>
                                     {hotel.status === 'active' ? 'Aktiv' : 'Inaktiv'}
                                 </Badge>
                             </TableCell>

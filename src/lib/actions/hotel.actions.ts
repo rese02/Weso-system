@@ -14,24 +14,59 @@ import { format } from 'date-fns';
  * collection to ensure uniqueness.
  */
 export async function createHotel(values: z.infer<typeof createHotelSchema>) {
-  console.log("Simulating hotel creation with values:", values);
-  // This is a simulation to avoid server errors due to auth issues.
-  // In a real scenario, the code below would interact with Firebase.
-  
-  try {
-    // Simulate a successful creation
-    const fakeHotelId = `fake-${Math.random().toString(36).substring(2, 9)}`;
-    console.log(`Simulated hotel creation successful with fake ID: ${fakeHotelId}`);
-    
-    // We wait for a short period to mimic network latency
-    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log("[Action: createHotel] Attempting to create hotel with data:", values.hotelName);
+    const { db } = getFirebaseAdmin();
+    const batch = db.batch();
 
-    return { success: true, message: 'Hotel created successfully! (Simulated)', hotelId: fakeHotelId };
+    const hotelRef = db.collection('hotels').doc();
+    const domainRef = db.collection('domains').doc(values.domain || hotelRef.id);
 
-  } catch (error: any) {
-    console.error("Error during simulated hotel creation: ", error);
-    return { success: false, message: error.message || 'Failed to create hotel. (Simulated)' };
-  }
+    try {
+        // Check if the domain is already taken
+        const domainDoc = await domainRef.get();
+        if (domainDoc.exists) {
+            console.warn(`[Action: createHotel] Domain '${values.domain}' already exists.`);
+            return { success: false, message: 'This domain is already registered. Please choose another one.' };
+        }
+
+        const newHotelData = {
+            id: hotelRef.id,
+            name: values.hotelName,
+            domain: values.domain || '',
+            // logo: values.logo, // Logo upload needs to be handled separately (e.g., upload to Cloud Storage)
+            hotelierEmail: values.hotelierEmail,
+            hotelierPassword: values.hotelierPassword, // IMPORTANT: Hash password in a real app
+            contactEmail: values.contactEmail,
+            contactPhone: values.contactPhone,
+            address: values.fullAddress,
+            meals: values.meals,
+            roomCategories: values.roomCategories,
+            bankDetails: {
+                accountHolder: values.bankAccountHolder,
+                iban: values.iban,
+                bic: values.bic,
+                bankName: values.bankName,
+            },
+            status: 'active',
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+        };
+
+        batch.set(hotelRef, newHotelData);
+        batch.set(domainRef, { hotelId: hotelRef.id });
+
+        await batch.commit();
+
+        console.log(`[Action: createHotel] Successfully created hotel with ID: ${hotelRef.id}`);
+        return { success: true, message: 'Hotel created successfully!', hotelId: hotelRef.id };
+
+    } catch (error) {
+        console.error("[Action: createHotel] Error creating hotel: ", error);
+        if (error instanceof Error) {
+            return { success: false, message: error.message };
+        }
+        return { success: false, message: 'An unexpected error occurred while creating the hotel.' };
+    }
 }
 
 
