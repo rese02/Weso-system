@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,7 +26,9 @@ const editBookingSchema = z.object({
 
 type EditBookingFormValues = z.infer<typeof editBookingSchema>;
 
-export default function EditBookingPage({ params }: { params: { bookingId: string } }) {
+export default function EditBookingPage() {
+  const params = useParams();
+  const bookingId = params.bookingId as string;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,9 +37,11 @@ export default function EditBookingPage({ params }: { params: { bookingId: strin
   });
 
   useEffect(() => {
+    if (!bookingId) return;
+
     async function fetchBooking() {
       setIsLoading(true);
-      const bookingData = await getBookingDetails(params.bookingId);
+      const bookingData = await getBookingDetails(bookingId);
       if (bookingData) {
         const dataWithDates = {
             ...bookingData,
@@ -49,7 +54,7 @@ export default function EditBookingPage({ params }: { params: { bookingId: strin
       setIsLoading(false);
     }
     fetchBooking();
-  }, [params.bookingId, form]);
+  }, [bookingId, form]);
 
   const onSubmit = (data: EditBookingFormValues) => {
     console.log('Submitting updated booking data:', data);
@@ -74,7 +79,7 @@ export default function EditBookingPage({ params }: { params: { bookingId: strin
         <Card>
             <CardHeader>
                 <CardTitle>Error</CardTitle>
-                <CardDescription>Could not find booking with ID: {params.bookingId}</CardDescription>
+                <CardDescription>Could not find booking with ID: {bookingId}</CardDescription>
             </CardHeader>
         </Card>
     );
