@@ -66,7 +66,7 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
         </div>
       </div>
 
-      <Card>
+      <Card className="w-full">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
