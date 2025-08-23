@@ -1,43 +1,24 @@
+'use server';
 // src/lib/firebase-admin.ts
 import admin from 'firebase-admin';
 
-// Ensure you have set these environment variables
-const serviceAccount = {
-  type: process.env.FIREBASE_ADMIN_TYPE,
-  project_id: process.env.FIREBASE_PROJECT_ID,
-  private_key_id: process.env.FIREBASE_ADMIN_PRIVATE_KEY_ID,
-  private_key: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  client_email: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-  client_id: process.env.FIREBASE_ADMIN_CLIENT_ID,
-  auth_uri: process.env.FIREBASE_ADMIN_AUTH_URI,
-  token_uri: process.env.FIREBASE_ADMIN_TOKEN_URI,
-  auth_provider_x509_cert_url: process.env.FIREBASE_ADMIN_AUTH_PROVIDER_X509_CERT_URL,
-  client_x509_cert_url: process.env.FIREBASE_ADMIN_CLIENT_X509_CERT_URL,
-};
-
-const isConfigured = serviceAccount.project_id && serviceAccount.private_key && serviceAccount.client_email;
-
-if (isConfigured && !admin.apps.length) {
+// Check if the app is already initialized to prevent errors
+if (!admin.apps.length) {
   try {
-    admin.initializeApp({
-      // @ts-ignore
-      credential: admin.credential.cert(serviceAccount),
-    });
+    // When deployed to App Hosting, the SDK will automatically
+    // discover the service account credentials.
+    // For local development, you would set the GOOGLE_APPLICATION_CREDENTIALS
+    // environment variable to point to your service account key file.
+    admin.initializeApp();
+    console.log('Firebase Admin SDK initialized successfully.');
   } catch (error) {
     console.error('Firebase admin initialization error', error);
   }
 }
 
-let adminAuth: admin.auth.Auth | undefined;
-let adminDb: admin.firestore.Firestore | undefined;
-let adminStorage: admin.storage.Storage | undefined;
-
-if (admin.apps.length > 0) {
-    adminAuth = admin.auth();
-    adminDb = admin.firestore();
-    adminStorage = admin.storage();
-}
-
+const adminAuth = admin.auth();
+const adminDb = admin.firestore();
+const adminStorage = admin.storage();
 
 export { adminAuth, adminDb, adminStorage };
 
