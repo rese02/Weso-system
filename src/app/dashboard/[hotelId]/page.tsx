@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,11 +16,59 @@ import {
     ShieldCheck, 
     Database, 
     Server, 
-    Wrench 
+    Wrench,
+    Loader2
 } from 'lucide-react';
 
-export default async function HotelDashboardPage({ params }: { params: { hotelId: string } }) {
-  const data = await getHotelDashboardData(params.hotelId);
+interface DashboardData {
+    hotelName: string;
+    stats: {
+        totalRevenue: string;
+        totalBookings: number;
+        confirmedBookings: number;
+        pendingActions: number;
+    };
+    recentActivities: {
+        id: string;
+        description: string;
+        timestamp: string;
+    }[];
+}
+
+export default function HotelDashboardPage({ params }: { params: { hotelId: string } }) {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+        if (!params.hotelId) return;
+        setIsLoading(true);
+        const result = await getHotelDashboardData(params.hotelId);
+        setData(result);
+        setIsLoading(false);
+    }
+    fetchData();
+  }, [params.hotelId]);
+
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  if (!data) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Error</CardTitle>
+                <CardDescription>Could not load dashboard data.</CardDescription>
+            </CardHeader>
+        </Card>
+    );
+  }
+
 
   return (
     <div className="space-y-8">
@@ -105,12 +156,14 @@ export default async function HotelDashboardPage({ params }: { params: { hotelId
                 </CardHeader>
                 <CardContent>
                     <ul className="space-y-3 text-sm">
-                        {data.recentActivities.map(activity => (
+                        {data.recentActivities.length > 0 ? data.recentActivities.map(activity => (
                             <li key={activity.id} className="flex items-center gap-3">
                                 <div className="text-muted-foreground font-mono text-xs">{activity.timestamp}</div>
                                 <div className="flex-1">{activity.description}</div>
                             </li>
-                        ))}
+                        )) : (
+                          <p className="text-sm text-muted-foreground">No recent activities found.</p>
+                        )}
                     </ul>
                 </CardContent>
             </Card>

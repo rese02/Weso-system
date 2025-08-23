@@ -1,12 +1,36 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { getHotelById } from '@/lib/actions/hotel.actions';
-import { Settings, AlertCircle } from 'lucide-react';
+import { Settings, AlertCircle, Loader2 } from 'lucide-react';
+import type { Hotel } from '@/lib/definitions';
 
-export default async function HotelSettingsPage({ params }: { params: { hotelId: string } }) {
-  const hotel = await getHotelById(params.hotelId);
+export default function HotelSettingsPage({ params }: { params: { hotelId: string } }) {
+  const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchHotel() {
+      if (!params.hotelId) return;
+      setIsLoading(true);
+      const data = await getHotelById(params.hotelId);
+      setHotel(data);
+      setIsLoading(false);
+    }
+    fetchHotel();
+  }, [params.hotelId]);
+
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   if (!hotel) {
     return (

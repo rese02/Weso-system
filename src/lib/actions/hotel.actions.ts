@@ -4,86 +4,131 @@ import 'dotenv/config';
 import type { z } from 'zod';
 import type { createHotelSchema, Hotel } from '@/lib/definitions';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-import { formatDistanceToNow } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 /**
- * Creates a new hotel, a corresponding Firebase Auth user for the hotelier,
- * and sets custom claims for role-based access control.
- * THIS IS CURRENTLY A SIMULATION to avoid server auth errors.
+ * Creates a new hotel in Firestore.
+ * This function takes the validated form data and creates a new document
+ * in the 'hotels' collection. It also adds the domain to a 'domains'
+ * collection to ensure uniqueness.
  */
 export async function createHotel(values: z.infer<typeof createHotelSchema>) {
-  console.log('SIMULATING: Creating hotel with values:', values.hotelName);
+  const { db } = getFirebaseAdmin();
+  const hotelRef = db.collection('hotels').doc();
+  const domainRef = db.collection('domains').doc(values.domain as string);
 
-  // This is a workaround for the "Could not refresh access token" error.
-  // In a real, configured environment, you would use the Firebase Admin SDK.
   try {
-    // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const simulatedHotelId = `hotel_${Date.now()}`;
-    console.log(`SIMULATION: Generated hotelId: ${simulatedHotelId}`);
-    
-    // The following actions are what would happen in a real scenario.
-    console.log(`SIMULATION: Would create Auth user for ${values.hotelierEmail}`);
-    console.log(`SIMULATION: Would set custom claims for user.`);
-    console.log(`SIMULATION: Would write to Firestore hotels and domains collections.`);
+    // Check if the domain is already taken
+    const domainDoc = await domainRef.get();
+    if (domainDoc.exists) {
+      return { success: false, message: 'This domain is already taken.' };
+    }
 
-    return { success: true, message: 'Hotel created successfully! (Simulated)', hotelId: simulatedHotelId };
+    const hotelData = {
+      id: hotelRef.id,
+      name: values.hotelName,
+      domain: values.domain,
+      hotelierEmail: values.hotelierEmail,
+      hotelierPassword: values.hotelierPassword, // IMPORTANT: In production, this should be hashed.
+      contactEmail: values.contactEmail,
+      contactPhone: values.contactPhone,
+      address: values.fullAddress,
+      roomCategories: values.roomCategories,
+      meals: values.meals,
+      bankDetails: {
+        accountHolder: values.bankAccountHolder,
+        bankName: values.bankName,
+        iban: values.iban,
+        bic: values.bic,
+      },
+      status: 'active',
+      createdAt: FieldValue.serverTimestamp(),
+    };
 
-  } catch (e) {
-    console.error("Error creating hotel (simulation fallback): ", e);
+    // Use a batch write to ensure atomicity
+    const batch = db.batch();
+    batch.set(hotelRef, hotelData);
+    batch.set(domainRef, { hotelId: hotelRef.id });
+
+    await batch.commit();
+
+    return { success: true, message: 'Hotel created successfully!', hotelId: hotelRef.id };
+  } catch (error) {
+    console.error("Error creating hotel: ", error);
     // @ts-ignore
-    return { success: false, message: e.message || 'Failed to create hotel.' };
+    return { success: false, message: error.message || 'Failed to create hotel.' };
   }
 }
 
-// Function to fetch all hotels for the agency - USES MOCK DATA
+// Function to fetch all hotels for the agency
 export async function getHotels() {
-    console.log("MOCK DATA: Fetching hotels.");
-    return [
-        {
-            id: 'hotel-sonnenalp',
-            name: 'Hotel Sonnenalp',
-            domain: 'sonnenalp.weso.app',
-            bookings: 12,
-            status: 'active',
-            address: 'Sonnenweg 12, 87527 Ofterschwang',
-            contactEmail: 'manager@hotel-sonnenalp.com',
-            contactPhone: '08321 2720'
-        },
-        {
-            id: 'seehotel-traum',
-            name: 'Seehotel Traum',
-            domain: 'seehotel.weso.app',
-            bookings: 5,
-            status: 'inactive',
-            address: 'Seestraße 1, 82319 Starnberg',
-            contactEmail: 'manager@seehotel-traum.de',
-            contactPhone: '08151 4470'
+    const { db } = getFirebaseAdmin();
+    try {
+        const hotelsSnapshot = await db.collection('hotels').orderBy('createdAt', 'desc').get();
+        if (hotelsSnapshot.empty) {
+            return [];
         }
-    ];
+        
+        const hotels = await Promise.all(hotelsSnapshot.docs.map(async (doc) => {
+            const hotelData = doc.data();
+            const bookingsSnapshot = await db.collection('hotels').doc(doc.id).collection('bookings').get();
+            return {
+                id: doc.id,
+                name: hotelData.name,
+                domain: hotelData.domain,
+                bookings: bookingsSnapshot.size, // Get the count of bookings
+                status: hotelData.status || 'inactive',
+            };
+        }));
+        
+        return hotels;
+
+    } catch (error) {
+        console.error("Error fetching hotels:", error);
+        return [];
+    }
 }
 
-// Get a single hotel's data by its ID - USES MOCK DATA
+// Get a single hotel's data by its ID
 export async function getHotelById(hotelId: string): Promise<Hotel | null> {
-    console.log(`MOCK DATA: Fetching hotel by ID: ${hotelId}`);
-    const hotels = await getHotels();
-    const hotel = hotels.find(h => h.id === hotelId);
-
-    if (!hotel) {
-        console.warn(`MOCK DATA: Hotel with id ${hotelId} not found.`);
+    const { db } = getFirebaseAdmin();
+    try {
+        const hotelDoc = await db.collection('hotels').doc(hotelId).get();
+        if (!hotelDoc.exists) {
+            console.warn(`Hotel with id ${hotelId} not found.`);
+            return null;
+        }
+        return hotelDoc.data() as Hotel;
+    } catch (error) {
+        console.error(`Error fetching hotel ${hotelId}:`, error);
         return null;
     }
-    return hotel;
 }
 
+// Helper function to convert Firestore Timestamps to JS Dates in nested objects
+function convertTimestampsToDates(obj: any): any {
+  if (!obj) return obj;
+  if (obj instanceof Timestamp) {
+    return obj.toDate();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(convertTimestampsToDates);
+  }
+  if (typeof obj === 'object') {
+    const newObj: { [key: string]: any } = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        newObj[key] = convertTimestampsToDates(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
 
-// Placeholder to get the dashboard data for a hotel
+// Get dashboard data for a hotel
 export async function getHotelDashboardData(hotelId: string) {
     const hotelDetails = await getHotelById(hotelId);
-    
     if (!hotelDetails) {
         return {
             hotelName: 'Hotel',
@@ -91,43 +136,46 @@ export async function getHotelDashboardData(hotelId: string) {
             recentActivities: []
         };
     }
-    
-    // Mock data for dashboard stats
-    const mockData: { [key: string]: any } = {
-        'hotel-sonnenalp': {
-            stats: {
-                totalRevenue: "12580.50",
-                totalBookings: 12,
-                confirmedBookings: 8,
-                pendingActions: 4
-            },
-            recentActivities: [
-                { id: '1', description: "Buchung für Max Mustermann wurde bestätigt.", timestamp: "vor 2 Stunden" },
-                { id: '2', description: "Neue Buchung von Erika Mustermann erhalten.", timestamp: "vor 1 Tag" },
-                { id: '3', description: "Gastdaten für Buchung #A4B1C3 vervollständigt.", timestamp: "vor 2 Tagen" },
-            ]
-        },
-        'seehotel-traum': {
-            stats: {
-                totalRevenue: "4200.00",
-                totalBookings: 5,
-                confirmedBookings: 3,
-                pendingActions: 2
-            },
-             recentActivities: [
-                { id: '1', description: "Buchung für John Doe wurde storniert.", timestamp: "vor 5 Stunden" },
-                { id: '2', description: "Neue Buchung von Jane Smith erhalten.", timestamp: "vor 3 Tagen" },
-            ]
+
+    const { db } = getFirebaseAdmin();
+    const bookingsRef = db.collection('hotels').doc(hotelId).collection('bookings');
+    const bookingsSnapshot = await bookingsRef.get();
+
+    let totalRevenue = 0;
+    let confirmedBookings = 0;
+    let pendingActions = 0;
+    const recentActivities: any[] = [];
+
+    bookingsSnapshot.forEach(doc => {
+        const booking = convertTimestampsToDates(doc.data());
+        if (booking.status === 'confirmed') {
+            totalRevenue += parseFloat(booking.totalPrice || 0);
+            confirmedBookings++;
         }
-    };
+        if (booking.status === 'pending_guest') {
+            pendingActions++;
+        }
+        if (booking.createdAt) {
+             recentActivities.push({
+                id: doc.id,
+                description: `New booking from ${booking.guestName}.`,
+                timestamp: format(booking.createdAt, 'dd.MM.yyyy HH:mm'),
+            });
+        }
+    });
     
-    const data = mockData[hotelId] || {
-        stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
-        recentActivities: []
-    };
+    // Sort activities descending by date
+    recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
 
     return {
         hotelName: hotelDetails.name,
-        ...data
+        stats: {
+            totalRevenue: totalRevenue.toFixed(2),
+            totalBookings: bookingsSnapshot.size,
+            confirmedBookings,
+            pendingActions
+        },
+        recentActivities: recentActivities.slice(0, 5).map(a => ({...a, timestamp: a.timestamp.toString()})), // Return latest 5
     };
 }

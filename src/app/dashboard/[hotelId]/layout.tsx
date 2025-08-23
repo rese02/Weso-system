@@ -1,22 +1,47 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from "next/link";
 import {
   LayoutDashboard,
   BedDouble,
   Settings,
   PlusCircle,
+  Loader2,
 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { getHotelById } from "@/lib/actions/hotel.actions";
+import type { Hotel } from '@/lib/definitions';
 
-export default async function HotelierLayout({
+export default function HotelierLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: { hotelId: string };
 }) {
-  const hotel = await getHotelById(params.hotelId);
+  const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchHotel() {
+      if (!params.hotelId) return;
+      setIsLoading(true);
+      const hotelData = await getHotelById(params.hotelId);
+      setHotel(hotelData);
+      setIsLoading(false);
+    }
+    fetchHotel();
+  }, [params.hotelId]);
+
+  if (isLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <SidebarProvider>

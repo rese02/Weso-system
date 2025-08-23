@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Table,
@@ -7,17 +10,38 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Trash2, CheckCircle, Clock, Eye, Copy, AlertCircle, CircleOff } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, CheckCircle, Clock, Eye, Copy, AlertCircle, CircleOff, Loader2 } from 'lucide-react';
 import { getBookingsByHotel } from '@/lib/actions/booking.actions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { Booking } from '@/lib/definitions';
+import { useParams } from 'next/navigation';
 
-export default async function BookingsPage({ params }: { params: { hotelId: string } }) {
-  const bookings = await getBookingsByHotel(params.hotelId);
+export default function BookingsPage() {
+  const params = useParams();
+  const hotelId = params.hotelId as string;
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+
+  useEffect(() => {
+    if (!hotelId) return;
+    
+    const fetchBookings = async () => {
+      setIsLoading(true);
+      const fetchedBookings = await getBookingsByHotel(hotelId);
+      // @ts-ignore
+      setBookings(fetchedBookings);
+      setIsLoading(false);
+    }
+    
+    fetchBookings();
+  }, [hotelId]);
+
 
   const getStatusInfo = (status: string): { text: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode } => {
     switch (status) {
@@ -58,7 +82,7 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
                 Löschen
             </Button>
             <Button asChild>
-              <Link href={`/dashboard/${params.hotelId}/bookings/create-booking`}>
+              <Link href={`/dashboard/${hotelId}/bookings/create-booking`}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Buchung erstellen
               </Link>
@@ -83,7 +107,16 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bookings.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center">
+                    <div className="flex justify-center items-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2">Loading bookings...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : bookings.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="h-24 text-center">
                     No bookings found.
@@ -116,7 +149,7 @@ export default async function BookingsPage({ params }: { params: { hotelId: stri
                         <TableCell className="text-right pr-4">
                             <div className="flex items-center justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                    <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}`}><Eye className="h-4 w-4" /></Link>
+                                    <Link href={`/dashboard/${hotelId}/bookings/${booking.id}`}><Eye className="h-4 w-4" /></Link>
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                                     <Link href={`/guest/${booking.guestLinkId}`} target="_blank" rel="noopener noreferrer"><Copy className="h-4 w-4" /></Link>
