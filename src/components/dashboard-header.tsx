@@ -10,7 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 type DashboardHeaderProps = {
@@ -20,14 +19,20 @@ type DashboardHeaderProps = {
     email: string;
     avatarUrl?: string;
   };
+  userRole: 'agency' | 'hotelier';
 };
 
-export function DashboardHeader({ title, user }: DashboardHeaderProps) {
+export function DashboardHeader({ title, user, userRole }: DashboardHeaderProps) {
   const router = useRouter();
 
   const handleLogout = () => {
     // In a real app, you would also clear any session cookies or tokens
-    router.push('/hotel/login');
+    // and call Firebase's signOut() method.
+    if (userRole === 'agency') {
+      router.push('/agency/login');
+    } else {
+      router.push('/hotel/login');
+    }
   };
 
 

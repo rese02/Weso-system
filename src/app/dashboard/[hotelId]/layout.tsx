@@ -4,9 +4,8 @@ import {
   BedDouble,
   Settings,
   PlusCircle,
-  ArrowLeft,
 } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { getHotelById } from "@/lib/actions/hotel.actions";
 
@@ -62,7 +61,8 @@ export default async function HotelierLayout({
         <div className="flex flex-1 flex-col">
             <DashboardHeader 
               title="Hotel Dashboard"
-              user={{ name: hotel.name, email: "manager@hotel.com" }}
+              user={{ name: hotel.name, email: "manager@hotel-sonnenalp.com" }}
+              userRole="hotelier"
             />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
               {children}

@@ -52,6 +52,7 @@ export default function AdminLayout({
             <DashboardHeader 
               title="Agency Dashboard"
               user={{ name: "Weso Systems", email: "admin@weso.com" }}
+              userRole="agency"
             />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
               {children}

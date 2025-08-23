@@ -1,51 +1,32 @@
 'use server';
 
 import type { z } from 'zod';
-import { hotelLoginSchema } from '@/lib/definitions';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { hotelLoginSchema, agencyLoginSchema } from '@/lib/definitions';
 
 // This is a simplified login function. 
-// In a production app, use Firebase Auth on the client-side for a full-fledged, secure authentication flow.
+// In a production app, you would use Firebase Auth on the client-side for a full-fledged, secure authentication flow.
+// The server would then verify the user's ID token.
 export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
-  
-  // --- TEMPORARY TEST ---
+  console.log('Attempting hotelier login for:', values.email);
+
+  // In a real app, you would verify credentials against Firebase Auth.
+  // For this prototype, we use a hardcoded credential for demonstration.
   if (values.email === 'manager@hotel-sonnenalp.com' && values.password === 'password123') {
-    return { success: true, message: 'Anmeldung erfolgreich!', hotelId: 'hotel-sonnenalp' };
+    return { success: true, message: 'Login successful!', hotelId: 'hotel-sonnenalp' };
   }
-  // --- END TEMPORARY TEST ---
+  
+  return { success: false, message: 'Invalid credentials. Please check your email and password.' };
+}
 
-  if (!adminDb) {
-    return { success: false, message: 'Server configuration error.' };
+
+export async function loginAgency(values: z.infer<typeof agencyLoginSchema>) {
+  console.log('Attempting agency login for:', values.email);
+
+  // In a real app, you would verify credentials against Firebase Auth and check for an "agency" custom claim.
+  // For this prototype, we use a hardcoded credential for demonstration.
+  if (values.email === 'admin@weso.com' && values.password === 'password123') {
+    return { success: true, message: 'Login successful!' };
   }
 
-  try {
-    // Check if a hotel owner with this email exists in the database.
-    const hotelsRef = adminDb.collection('hotels');
-    const snapshot = await hotelsRef.where('ownerEmail', '==', values.email).limit(1).get();
-
-    if (snapshot.empty) {
-      return { success: false, message: 'Kein Hotel mit dieser E-Mail-Adresse gefunden.' };
-    }
-
-    const hotelDoc = snapshot.docs[0];
-    const hotelData = hotelDoc.data();
-    const hotelId = hotelDoc.id;
-
-    // --- IMPORTANT ---
-    // This is a placeholder for password verification.
-    // In a real application, you would NEVER store plaintext passwords.
-    // You would use Firebase Authentication to create a user, and then on the client-side,
-    // you would use signInWithEmailAndPassword from the Firebase client SDK.
-    // The server would then verify the user's ID token.
-    // For this prototype, we are skipping the secure password check.
-    
-    // Simulating successful login
-    console.log(`Simulating successful login for ${values.email} for hotel ${hotelId}`);
-    
-    return { success: true, message: 'Anmeldung erfolgreich!', hotelId: hotelId };
-
-  } catch (error) {
-    console.error('Error during hotelier login:', error);
-    return { success: false, message: 'Ein unerwarteter Fehler ist aufgetreten.' };
-  }
+  return { success: false, message: 'Invalid credentials or not an agency account.' };
 }

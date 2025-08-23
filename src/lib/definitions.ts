@@ -10,7 +10,7 @@ export type Hotel = {
 };
 
 export type Guest = {
-  id: string;
+  id:string;
   firstName: string;
   lastName: string;
   email: string;
@@ -70,8 +70,13 @@ export const createHotelSchema = z.object({
 });
 
 export const hotelLoginSchema = z.object({
-  email: z.string().email({ message: "Bitte geben Sie eine gültige E-Mail-Adresse ein." }),
-  password: z.string().min(1, { message: "Bitte geben Sie Ihr Passwort ein." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  password: z.string().min(1, { message: "Password is required." }),
+});
+
+export const agencyLoginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  password: z.string().min(1, { message: "Password is required." }),
 });
 
 
