@@ -9,7 +9,7 @@ export default async function HotelSettingsPage({ params }: { params: { hotelId:
   const hotel = await getHotelById(params.hotelId);
 
   return (
-    <div className="mx-auto space-y-8">
+    <div className="space-y-8">
        <div>
         <h1 className="font-headline text-3xl md:text-4xl font-bold">Hotel Settings</h1>
         <p className="text-muted-foreground">Manage your hotel's profile and configuration.</p>
