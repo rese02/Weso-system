@@ -1,13 +1,11 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
-import { createBookingSchema } from '@/lib/definitions';
-import { createBookingLink } from '@/lib/actions/booking.actions';
+import { hotelDirectBookingSchema } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,200 +13,254 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, User, BedDouble, Link as LinkIcon, Clipboard, Check } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { CalendarIcon, User, PlusCircle, Trash2, BedDouble } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { addDays, format } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
-type CreateBookingFormValues = z.infer<typeof createBookingSchema>;
+type CreateBookingFormValues = z.infer<typeof hotelDirectBookingSchema>;
 
 export default function CreateBookingPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const params = useParams();
   const hotelId = params.hotelId as string;
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [isCopied, setIsCopied] = useState(false);
 
   const form = useForm<CreateBookingFormValues>({
-    resolver: zodResolver(createBookingSchema),
+    resolver: zodResolver(hotelDirectBookingSchema),
     defaultValues: {
-      guestName: '',
-      roomType: '',
+      firstName: '',
+      lastName: '',
+      dateRange: { from: new Date(), to: addDays(new Date(), 4) },
+      mealPlan: 'none',
+      totalPrice: '',
+      language: 'de',
+      rooms: [{ roomType: 'Standard', adults: 1, children: 0, toddlers: 0, childAges: '' }],
+      internalNotes: '',
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "rooms",
+  });
+
   const onSubmit = async (values: CreateBookingFormValues) => {
-    const result = await createBookingLink(hotelId, values);
-    if (result.success && result.link) {
-      const fullUrl = `${window.location.origin}${result.link}`;
-      setGeneratedLink(fullUrl);
-      toast({
-        title: "Booking Link Created!",
-        description: "Share this link with the guest to complete their booking.",
-      });
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to create the booking link. Please try again.",
-      });
-    }
-  };
-  
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedLink);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    // In a real app, this would call a server action to create the booking directly.
+    console.log({ hotelId, ...values });
+    toast({
+      title: "Buchung erfolgreich erstellt!",
+      description: `Die Buchung für ${values.firstName} ${values.lastName} wurde angelegt.`,
+    });
+    router.push(`/dashboard/${hotelId}/bookings`);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Create New Booking</CardTitle>
-        <CardDescription>Enter initial details to generate a secure booking link for the guest.</CardDescription>
+        <CardTitle className="font-headline text-2xl">Neue Buchung erstellen</CardTitle>
+        <CardDescription>Füllen Sie die folgenden Felder aus, um eine Buchung direkt im System anzulegen.</CardDescription>
       </CardHeader>
       <CardContent>
-        {!generatedLink ? (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* --- Guest and Date Section --- */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <FormField control={form.control} name="firstName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><User size={16} /> Vorname</FormLabel>
+                  <FormControl><Input placeholder="Vorname des Gastes" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="lastName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><User size={16} /> Nachname</FormLabel>
+                  <FormControl><Input placeholder="Nachname des Gastes" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
               <FormField
                 control={form.control}
-                name="guestName"
+                name="dateRange"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Guest Full Name</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                          <Input placeholder="Max Mustermann" {...field} className="pl-10" />
-                      </div>
-                    </FormControl>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Zeitraum (Anreise - Abreise)</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value.from && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value?.from ? (
+                              field.value.to ? (
+                                <>
+                                  {format(field.value.from, "LLL dd, y")} -{" "}
+                                  {format(field.value.to, "LLL dd, y")}
+                                </>
+                              ) : (
+                                format(field.value.from, "LLL dd, y")
+                              )
+                            ) : (
+                              <span>Zeitraum auswählen</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={field.value.from}
+                          selected={{ from: field.value.from, to: field.value.to }}
+                          onSelect={(range) => field.onChange(range as DateRange)}
+                          numberOfMonths={2}
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="checkInDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Check-in Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
+            </div>
+            
+            {/* --- Pricing and Language Section --- */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField control={form.control} name="mealPlan" render={({ field }) => (
+                     <FormItem>
+                        <FormLabel>Verpflegung</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Verpflegung auswählen" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="none">Keine</SelectItem>
+                                <SelectItem value="breakfast">Frühstück</SelectItem>
+                                <SelectItem value="half-board">Halbpension</SelectItem>
+                                <SelectItem value="full-board">Vollpension</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
                     </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="checkOutDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Check-out Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < (form.getValues('checkInDate') || new Date())}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
+                )} />
+                <FormField control={form.control} name="totalPrice" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Gesamtpreis (€)</FormLabel>
+                        <FormControl><Input type="number" placeholder="Preis in Euro" {...field} /></FormControl>
+                        <FormMessage />
                     </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="roomType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Room Type</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                          <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                          <Input placeholder="z.B. Deluxe Suite" {...field} className="pl-10" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                )} />
+                 <FormField control={form.control} name="language" render={({ field }) => (
+                     <FormItem>
+                        <FormLabel>Sprache für Gastformular</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <FormControl><SelectTrigger><SelectValue placeholder="Sprache auswählen" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="de">Deutsch</SelectItem>
+                                <SelectItem value="en">Englisch</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+            </div>
 
-              <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                {form.formState.isSubmitting ? 'Generating...' : 'Generate Guest Link'}
-              </Button>
-            </form>
-          </Form>
-        ) : (
-          <div className="space-y-4 text-center">
-              <div className="flex justify-center">
-                  <div className="rounded-full bg-accent p-4 text-accent-foreground">
-                      <Check className="h-10 w-10" />
-                  </div>
-              </div>
-            <h3 className="text-2xl font-bold font-headline">Link Generated Successfully!</h3>
-            <p className="text-muted-foreground">Share this secure link with the guest to complete their booking information.</p>
-            <div className="flex w-full items-center space-x-2 rounded-lg border bg-secondary p-2">
-              <LinkIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-              <Input type="text" value={generatedLink} readOnly className="flex-1 bg-transparent border-none shadow-none focus-visible:ring-0" />
-              <Button size="icon" onClick={copyToClipboard} className="flex-shrink-0 bg-accent hover:bg-accent/90">
-                {isCopied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+            {/* --- Room Details Section --- */}
+            <div className="space-y-6">
+              {fields.map((field, index) => (
+                <Card key={field.id} className="bg-secondary/50">
+                   <CardHeader className="py-4">
+                     <div className="flex items-center justify-between">
+                       <CardTitle className="text-lg flex items-center gap-2"><BedDouble size={20}/> Zimmer {index + 1} Details</CardTitle>
+                       {index > 0 && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                       )}
+                     </div>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                    <FormField control={form.control} name={`rooms.${index}.roomType`} render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Zimmertyp</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Zimmertyp" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="Standard">Standard</SelectItem>
+                                <SelectItem value="Einzelzimmer">Einzelzimmer</SelectItem>
+                                <SelectItem value="Doppelzimmer">Doppelzimmer</SelectItem>
+                                <SelectItem value="Suite">Suite</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                     <FormField control={form.control} name={`rooms.${index}.adults`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Erwachsene</FormLabel>
+                        <FormControl><Input type="number" min={1} {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                     <FormField control={form.control} name={`rooms.${index}.children`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Kinder (3+)</FormLabel>
+                        <FormControl><Input type="number" min={0} {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                     <FormField control={form.control} name={`rooms.${index}.toddlers`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Kleinkinder</FormLabel>
+                        <FormControl><Input type="number" min={0} {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <div className="sm:col-span-2 md:col-span-5">
+                       <FormField control={form.control} name={`rooms.${index}.childAges`} render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Alter Kinder (3+)</FormLabel>
+                            <FormControl><Input placeholder="z.B. 4, 8, 12" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <Button type="button" variant="outline" onClick={() => append({ roomType: 'Standard', adults: 1, children: 0, toddlers: 0, childAges: '' })}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Weiteres Zimmer hinzufügen
               </Button>
             </div>
-            <Button onClick={() => { form.reset(); setGeneratedLink(''); }}>Create Another Booking</Button>
-          </div>
-        )}
+            
+            {/* --- Internal Notes Section --- */}
+             <FormField control={form.control} name="internalNotes" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Interne Bemerkungen (Optional)</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Zusätzliche Informationen für das Hotelpersonal..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* --- Footer Buttons --- */}
+            <div className="flex justify-end gap-4 pt-4">
+                <Button type="button" variant="outline" onClick={() => router.back()}>
+                    Abbrechen
+                </Button>
+                <Button type="submit" disabled={form.formState.isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    {form.formState.isSubmitting ? 'Wird erstellt...' : 'Buchung erstellen'}
+                </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

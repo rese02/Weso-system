@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { type Timestamp } from 'firebase-admin/firestore';
+import { DateRange } from 'react-day-picker';
 
 // Base types
 export type Hotel = {
@@ -118,4 +119,30 @@ export const documentUploadSchema = z.object({
 
 export const paymentProofSchema = z.object({
     paymentProofUrl: z.string().url("A valid payment proof URL is required.").optional().or(z.literal('')),
+});
+
+// Schema for the new detailed hotelier booking form
+const roomSchema = z.object({
+  roomType: z.string().min(1, "Zimmertyp ist erforderlich."),
+  adults: z.number().min(1, "Mindestens ein Erwachsener ist erforderlich."),
+  children: z.number().min(0),
+  toddlers: z.number().min(0),
+  childAges: z.string().optional(),
+});
+
+export const hotelDirectBookingSchema = z.object({
+  firstName: z.string().min(2, "Vorname ist erforderlich."),
+  lastName: z.string().min(2, "Nachname ist erforderlich."),
+  dateRange: z.object({
+      from: z.date({ required_error: "Anreisedatum ist erforderlich."}),
+      to: z.date({ required_error: "Abreisedatum ist erforderlich."}),
+  }),
+  mealPlan: z.string(),
+  totalPrice: z.string().min(1, "Gesamtpreis ist erforderlich."),
+  language: z.string(),
+  rooms: z.array(roomSchema).min(1, "Mindestens ein Zimmer muss hinzugefügt werden."),
+  internalNotes: z.string().optional(),
+}).refine(data => data.dateRange.from < data.dateRange.to, {
+    message: "Das Abreisedatum muss nach dem Anreisedatum liegen.",
+    path: ["dateRange"],
 });
