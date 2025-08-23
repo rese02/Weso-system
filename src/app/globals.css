@@ -81,4 +81,8 @@
   body {
     @apply bg-background text-foreground;
   }
+  .h-screen {
+    height: 100vh;
+    width: 100%;
+  }
 }
