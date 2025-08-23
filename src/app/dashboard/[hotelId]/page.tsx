@@ -70,8 +70,8 @@ export default async function HotelDashboardPage({ params }: { params: { hotelId
         </Card>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-5">
-        <div className="md:col-span-3 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
             {/* Quick Actions */}
             <Card>
                 <CardHeader>
@@ -115,7 +115,7 @@ export default async function HotelDashboardPage({ params }: { params: { hotelId
                 </CardContent>
             </Card>
         </div>
-        <div className="md:col-span-2">
+        <div className="lg:col-span-1">
             {/* System Status */}
             <Card>
                  <CardHeader>
