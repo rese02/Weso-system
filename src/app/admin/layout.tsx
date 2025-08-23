@@ -15,10 +15,10 @@ export default function AdminLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-secondary/50">
+      <div className="flex h-screen bg-background">
         <Sidebar>
           <div className="flex h-full flex-col">
-            <div className="flex h-16 items-center px-6 border-b">
+            <div className="flex h-16 items-center border-b px-6">
               <Link href="/admin" className="flex items-center gap-2 font-headline text-xl font-semibold">
                 <Hotel className="h-7 w-7 text-primary" />
                 <span>HotelHub</span>
@@ -48,7 +48,7 @@ export default function AdminLayout({
             </div>
           </div>
         </Sidebar>
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col bg-secondary/50">
             <DashboardHeader 
               title="Agency Dashboard"
               user={{ name: "Weso Systems", email: "admin@weso.com" }}

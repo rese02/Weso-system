@@ -38,7 +38,7 @@ export function DashboardHeader({ title, user, userRole }: DashboardHeaderProps)
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 w-full">
-      <h1 className="font-headline text-2xl font-semibold text-primary">{title}</h1>
+      <h1 className="font-headline text-2xl font-semibold text-foreground/80">{title}</h1>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
@@ -48,7 +48,7 @@ export function DashboardHeader({ title, user, userRole }: DashboardHeaderProps)
             </div>
             <Avatar>
               <AvatarImage src={user.avatarUrl} alt={user.name} />
-              <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>

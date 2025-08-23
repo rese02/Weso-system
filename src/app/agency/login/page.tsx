@@ -1,17 +1,16 @@
 import Link from 'next/link';
 import { Building } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AgencyLoginForm } from './agency-login-form';
 
 export default function AgencyLoginPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-secondary/50 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Building className="h-6 w-6" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Building className="h-7 w-7" />
           </div>
           <CardTitle className="mt-4 font-headline text-3xl">Agency Login</CardTitle>
           <CardDescription>Administrator access for HotelHub Central.</CardDescription>

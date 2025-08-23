@@ -45,7 +45,7 @@ export default function HotelierLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-secondary/50">
+      <div className="flex h-screen bg-background">
         <Sidebar>
           <div className="flex h-full flex-col">
             <div className="flex h-16 items-center border-b px-4">
@@ -83,7 +83,7 @@ export default function HotelierLayout({
             </div>
           </div>
         </Sidebar>
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col bg-secondary/50">
             <DashboardHeader 
               title="Hotel Dashboard"
               user={{ name: hotel?.name ?? "Hotel User", email: hotel?.contactEmail ?? 'N/A' }}
