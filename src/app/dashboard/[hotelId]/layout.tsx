@@ -65,9 +65,7 @@ export default async function HotelierLayout({
               userRole="hotelier"
             />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-               <div className="mx-auto w-full">
-                {children}
-              </div>
+              {children}
             </main>
         </div>
       </div>
