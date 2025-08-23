@@ -1,11 +1,11 @@
 
 'use server';
 
-import type { z } from 'zod';
+import type { z as Zod } from 'zod';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { format } from 'date-fns';
-import type { Hotel } from '@/lib/definitions';
+import type { Hotel, createHotelSchema as CreateHotelZodSchema } from '@/lib/definitions';
 
 
 // This is the new, more robust createHotel action based on user feedback.
@@ -13,17 +13,7 @@ import type { Hotel } from '@/lib/definitions';
 // The front-end form (`create-hotel/page.tsx`) will need to be adapted to call this action
 // with the appropriate, simplified input. For now, we are providing the new backend logic.
 
-const CreateHotelSchema = z.object({
-  name: z.string().min(2, "Hotel name must be at least 2 characters."),
-  // The agency user ID should be passed from the authenticated session
-  ownerId: z.string().min(1, "Owner ID is required."), 
-  address: z.string().optional(),
-  timezone: z.string().optional(),
-  currency: z.string().optional(),
-  locale: z.string().optional(),
-});
-
-export type CreateHotelInput = z.infer<typeof CreateHotelSchema>;
+export type CreateHotelInput = Zod.infer<typeof CreateHotelZodSchema>;
 
 /**
  * Creates a hotel document, a default wizardConfig, and seeds a default room.
@@ -31,19 +21,27 @@ export type CreateHotelInput = z.infer<typeof CreateHotelSchema>;
  * - Creates /hotels/{hotelId}/wizardConfig/default
  * - Creates /hotels/{hotelId}/rooms/{roomId} with a default room
  */
-export async function createHotel(input: CreateHotelInput) {
-    const parsed = CreateHotelSchema.parse(input);
+export async function createHotel(values: CreateHotelInput) {
     const { db } = getFirebaseAdmin();
     const hotelRef = db.collection('hotels').doc();
     const now = FieldValue.serverTimestamp();
 
     const hotelDoc = {
-        name: parsed.name,
-        address: parsed.address || null,
-        ownerId: parsed.ownerId, // This would be the agency's user ID
-        timezone: parsed.timezone || 'Europe/Rome',
-        currency: parsed.currency || 'EUR',
-        locale: parsed.locale || 'de-DE',
+        name: values.hotelName,
+        domain: values.domain,
+        hotelierEmail: values.hotelierEmail,
+        hotelierPassword: values.hotelierPassword, // SECURITY WARNING: Passwords should be hashed in production
+        contactEmail: values.contactEmail,
+        contactPhone: values.contactPhone,
+        address: values.fullAddress,
+        meals: values.meals,
+        roomCategories: values.roomCategories,
+        bankDetails: {
+            accountHolder: values.bankAccountHolder,
+            iban: values.iban,
+            bic: values.bic,
+            bankName: values.bankName,
+        },
         settings: {
             allowGuestUploads: true,
             maxUploadMb: 10,
@@ -52,86 +50,21 @@ export async function createHotel(input: CreateHotelInput) {
         createdAt: now,
         updatedAt: now,
     };
-
-    const defaultWizard = {
-        createdAt: now,
-        updatedAt: now,
-        steps: [
-            {
-                id: 'guest-info',
-                title: 'Gäste Informationen',
-                description: 'Name, Kontakt & Adresse',
-                inputs: [
-                    { key: 'firstName', label: 'Vorname', type: 'text', required: true },
-                    { key: 'lastName', label: 'Nachname', type: 'text', required: true },
-                    { key: 'email', label: 'E‑Mail', type: 'email', required: true },
-                    { key: 'phone', label: 'Telefon', type: 'tel', required: false },
-                ],
-            },
-            {
-                id: 'documents',
-                title: 'Dokumente',
-                description: 'Lade Ausweis/Pass hoch (falls erforderlich)',
-                inputs: [
-                    { key: 'id_document', label: 'Ausweis / Reisepass', type: 'file', required: false },
-                ],
-            },
-            {
-                id: 'confirm',
-                title: 'Bestätigung',
-                description: 'Einwilligungen & Check',
-                inputs: [
-                    { key: 'consent_gdpr', label: 'Einwilligung zur Datenverarbeitung', type: 'checkbox', required: true },
-                ],
-            },
-        ],
-    };
     
-    const defaultRoom = {
-        title: 'Standardzimmer',
-        description: 'Standardmäßig angelegtes Zimmer',
-        capacity: 2,
-        price: 0,
-        createdAt: now,
-        updatedAt: now,
-    };
-    
-    const defaultBookingTemplate = {
-        title: 'Standard Buchungsvorlage',
-        description: 'Vorlage für neue Buchungen',
-        createdAt: now,
-        updatedAt: now,
-        template: {
-            allowPartialPayments: false,
-        },
-    };
-
     try {
-        await db.runTransaction(async (tx) => {
-            tx.set(hotelRef, hotelDoc);
-            
-            const wizardRef = hotelRef.collection('wizardConfig').doc('default');
-            tx.set(wizardRef, defaultWizard);
-            
-            const roomRef = hotelRef.collection('rooms').doc();
-            tx.set(roomRef, defaultRoom);
-            
-            const bookingTemplateRef = hotelRef.collection('bookingTemplates').doc('default');
-            tx.set(bookingTemplateRef, defaultBookingTemplate);
-        });
-
+        await hotelRef.set(hotelDoc);
         console.log(`[Action: createHotel] Successfully created hotel with ID: ${hotelRef.id}`);
         return {
             success: true,
             hotelId: hotelRef.id,
-            message: 'Hotel angelegt und mit Default Wizard + Room geseedet.',
+            message: 'Hotel wurde erfolgreich angelegt.',
         };
     } catch (err) {
         console.error('[Action: createHotel] Transaction error', err);
         const errorMessage = err instanceof Error ? err.message : String(err);
         return {
             success: false,
-            error: errorMessage,
+            message: errorMessage,
         };
     }
 }
@@ -157,6 +90,7 @@ export async function getHotels() {
             return {
                 ...hotelData,
                 id: doc.id,
+                name: hotelData.name || hotelData.hotelName, // Handle both possible field names
                 bookings: bookingsCount,
                 status: hotelData.status || 'active',
             };
@@ -182,8 +116,12 @@ export async function getHotelById(hotelId: string): Promise<Hotel | null> {
             return null;
         }
         const hotelData = hotelDoc.data() as Hotel;
-        console.log(`[Action: getHotelById] Successfully fetched hotel: ${hotelData.name}`);
-        return JSON.parse(JSON.stringify({ ...hotelData, id: hotelDoc.id }));
+        // Ensure legacy and new structures are handled
+        const name = hotelData.name || (hotelData as any).hotelName;
+        const address = hotelData.address || (hotelData as any).fullAddress;
+
+        console.log(`[Action: getHotelById] Successfully fetched hotel: ${name}`);
+        return JSON.parse(JSON.stringify({ ...hotelData, id: hotelDoc.id, name, address }));
     } catch (error) {
         console.error(`[Action: getHotelById] Error fetching hotel ${hotelId}:`, error);
         return null;
@@ -257,6 +195,7 @@ export async function getHotelDashboardData(hotelId: string) {
 
     } catch (error) {
         console.error(`[Action: getHotelDashboardData] Error fetching dashboard data for hotel ${hotelId}:`, error);
+        // Return a default structure on error to prevent crashes
         return {
             hotelName: 'Hotel',
             stats: { totalRevenue: "0.00", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
