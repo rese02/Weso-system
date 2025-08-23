@@ -4,9 +4,31 @@ import type { z } from 'zod';
 import type { createBookingSchema } from '@/lib/definitions';
 import { generateConfirmationEmail } from '@/ai/flows/generate-confirmation-email';
 import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { sendEmail } from './email.actions';
 import { format } from 'date-fns';
+
+// Helper function to convert Firestore Timestamps to JS Dates in nested objects
+function convertTimestampsToDates(obj: any): any {
+  if (!obj) return obj;
+  if (obj instanceof Timestamp) {
+    return obj.toDate();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(convertTimestampsToDates);
+  }
+  if (typeof obj === 'object') {
+    const newObj: { [key: string]: any } = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        newObj[key] = convertTimestampsToDates(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
 
 // Function to create a new booking and generate a guest link
 export async function createBookingLink(hotelId: string, values: z.infer<typeof createBookingSchema>) {
@@ -123,6 +145,9 @@ export async function submitGuestBooking(linkId: string, formData: any) {
 
     const hotelData = hotelDoc.data();
     const bookingData = bookingDoc.data();
+    if (!bookingData) {
+        return { success: false, message: 'Booking data is missing.' };
+    }
 
     // Prepare data to update
     const guestData = {
@@ -150,9 +175,9 @@ export async function submitGuestBooking(linkId: string, formData: any) {
     const emailInput = {
       guestName: `${formData.firstName} ${formData.lastName}`,
       hotelName: hotelData?.name || 'Your Hotel',
-      checkInDate: format(bookingData?.checkInDate.toDate(), 'PPP'),
-      checkOutDate: format(bookingData?.checkOutDate.toDate(), 'PPP'),
-      bookingDetails: `1x ${bookingData?.roomType}`,
+      checkInDate: format(bookingData.checkInDate.toDate(), 'PPP'),
+      checkOutDate: format(bookingData.checkOutDate.toDate(), 'PPP'),
+      bookingDetails: `1x ${bookingData.roomType}`,
     };
   
     try {
@@ -204,8 +229,8 @@ export async function getBookingDataForGuest(linkId: string) {
     return {
         success: true,
         data: {
-            hotel: hotelDoc.data(),
-            booking: bookingDoc.data(),
+            hotel: convertTimestampsToDates(hotelDoc.data()),
+            booking: convertTimestampsToDates(bookingDoc.data()),
         }
     };
 }

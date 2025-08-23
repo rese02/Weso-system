@@ -100,12 +100,12 @@ export function BookingForm({ linkId }: { linkId: string }) {
     );
   }
 
-  if (error) {
+  if (error || !bookingDetails) {
      return (
       <Card className="w-full max-w-2xl p-8 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
         <CardTitle className="mt-4 font-headline text-2xl">Error</CardTitle>
-        <CardDescription className="mt-2">{error}</CardDescription>
+        <CardDescription className="mt-2">{error || "Could not load booking details."}</CardDescription>
       </Card>
     );
   }
@@ -166,15 +166,15 @@ export function BookingForm({ linkId }: { linkId: string }) {
                 <Button type="button" onClick={() => form.setValue('paymentProofUrl', 'https://placehold.co/payment.jpg', { shouldValidate: true })}>Simulate Upload</Button>
               </div>
             )}
-            {currentStep === 3 && formData && (
+            {currentStep === 3 && formData && bookingDetails.booking.checkInDate && (
                 <div className="space-y-4 rounded-lg border bg-secondary p-4">
                     <h4 className="font-bold">Review Your Information</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div><p><strong>Full Name:</strong> {formData.firstName} {formData.lastName}</p></div>
                         <div><p><strong>Email:</strong> {formData.email}</p></div>
                         <div><p><strong>Phone:</strong> {formData.phone}</p></div>
-                        <div><p><strong>Check-in:</strong> {format(bookingDetails.booking.checkInDate.toDate(), 'PPP')}</p></div>
-                        <div><p><strong>Check-out:</strong> {format(bookingDetails.booking.checkOutDate.toDate(), 'PPP')}</p></div>
+                        <div><p><strong>Check-in:</strong> {format(new Date(bookingDetails.booking.checkInDate), 'PPP')}</p></div>
+                        <div><p><strong>Check-out:</strong> {format(new Date(bookingDetails.booking.checkOutDate), 'PPP')}</p></div>
                         <div><p><strong>Room:</strong> {bookingDetails.booking.roomType}</p></div>
                         <div><p><strong>Document:</strong> {formData.documentUrl ? 'Uploaded' : 'Not Uploaded'}</p></div>
                         <div><p><strong>Payment Proof:</strong> {formData.paymentProofUrl ? 'Uploaded' : 'Not Uploaded'}</p></div>
