@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -59,7 +58,7 @@ export default function AdminDashboardPage() {
       </div>
       
       {isLoading ? (
-        <Card>
+        <Card className="w-full">
             <CardContent className="p-6">
                  <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -67,7 +66,7 @@ export default function AdminDashboardPage() {
             </CardContent>
         </Card>
       ) : hotels.length === 0 ? (
-          <Card className="text-center p-8 border-dashed">
+          <Card className="w-full text-center p-8 border-dashed">
             <CardHeader>
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary">
                     <Hotel className="h-8 w-8" />
