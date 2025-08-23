@@ -28,10 +28,16 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchHotels() {
       setIsLoading(true);
-      const fetchedHotels = await getHotels();
-      // @ts-ignore
-      setHotels(fetchedHotels);
-      setIsLoading(false);
+      try {
+        const fetchedHotels = await getHotels();
+        // @ts-ignore
+        setHotels(fetchedHotels);
+      } catch (error) {
+        console.error("Failed to fetch hotels:", error);
+        // Handle error appropriately, maybe show a toast
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchHotels();
   }, []);
@@ -78,7 +84,7 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
       ) : (
-        <Card>
+        <Card className="w-full">
             <CardContent className="p-0">
                 <Table>
                     <TableHeader>

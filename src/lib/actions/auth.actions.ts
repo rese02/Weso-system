@@ -14,6 +14,7 @@ export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
     const snapshot = await hotelsRef.where('hotelierEmail', '==', values.email).limit(1).get();
 
     if (snapshot.empty) {
+      console.log(`Login failed: No hotel found with email ${values.email}`);
       return { success: false, message: 'Invalid credentials.' };
     }
 
@@ -23,8 +24,10 @@ export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
     // In a real app, passwords should be hashed and compared securely.
     // This is a plain text comparison for demonstration purposes.
     if (hotelData.hotelierPassword === values.password) {
+      console.log(`Login successful for hotel ${hotelDoc.id}`);
       return { success: true, message: 'Login successful!', hotelId: hotelDoc.id };
     } else {
+      console.log(`Login failed: Password mismatch for hotel ${hotelDoc.id}`);
       return { success: false, message: 'Invalid credentials.' };
     }
 
@@ -41,8 +44,10 @@ export async function loginAgency(values: z.infer<typeof agencyLoginSchema>) {
   // This simulates checking for a user with an "agency" role claim.
   // This part remains hardcoded as there's no "agency" data model yet.
   if (values.email === 'admin@weso.com' && values.password === 'password123') {
+    console.log('Agency login successful.');
     return { success: true, message: 'Login successful!' };
   }
 
+  console.log('Agency login failed: Invalid credentials.');
   return { success: false, message: 'Invalid credentials or not an agency account.' };
 }

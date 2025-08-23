@@ -2,7 +2,7 @@
 'use server';
 
 import type { z } from 'zod';
-import type { createBookingSchema, Booking, hotelDirectBookingSchema } from '@/lib/definitions';
+import type { Booking, hotelDirectBookingSchema, BookingDataForGuest, guestDetailsSchema } from '@/lib/definitions';
 import { generateConfirmationEmail } from '@/ai/flows/generate-confirmation-email';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
@@ -18,7 +18,7 @@ function convertTimestampsToDates(obj: any): any {
   if (Array.isArray(obj)) {
     return obj.map(convertTimestampsToDates);
   }
-  if (typeof obj === 'object') {
+  if (typeof obj === 'object' && obj !== null) {
     const newObj: { [key: string]: any } = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -34,14 +34,12 @@ function convertTimestampsToDates(obj: any): any {
 export async function createDirectBooking(hotelId: string, values: z.infer<typeof hotelDirectBookingSchema>) {
     console.log(`[Action: createDirectBooking] START for hotel ${hotelId}`, values);
     const { db: adminDb } = getFirebaseAdmin();
-    if (!adminDb) {
-        console.error("[Action: createDirectBooking] Firestore not initialized.");
-        return { success: false, message: 'Server configuration error.' };
-    }
 
     try {
         const hotelRef = adminDb.collection('hotels').doc(hotelId);
         const bookingRef = hotelRef.collection('bookings').doc();
+        const guestLinkRef = adminDb.collection('guestLinks').doc();
+
 
         const bookingData = {
             id: bookingRef.id,
@@ -49,103 +47,55 @@ export async function createDirectBooking(hotelId: string, values: z.infer<typeo
             guestName: `${values.firstName} ${values.lastName}`,
             checkInDate: Timestamp.fromDate(values.dateRange.from),
             checkOutDate: Timestamp.fromDate(values.dateRange.to),
-            status: 'confirmed', // Directly confirmed as it's created by the hotelier
-            guestLinkId: '', // No guest link needed for direct bookings
+            status: 'pending_guest', // Starts as pending until guest fills form
+            guestLinkId: guestLinkRef.id,
             language: values.language,
             mealPlan: values.mealPlan,
             totalPrice: values.totalPrice,
             rooms: values.rooms,
             internalNotes: values.internalNotes,
-            guestDetails: {
-                firstName: values.firstName,
-                lastName: values.lastName,
-                email: '', // Not collected in this form
-                phone: '', // Not collected in this form
-            },
             createdAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),
         };
 
-        await bookingRef.set(bookingData);
+        const guestLinkData = {
+            id: guestLinkRef.id,
+            bookingId: bookingRef.id,
+            hotelId: hotelId,
+            isCompleted: false,
+            createdAt: FieldValue.serverTimestamp(),
+        }
+
+        const batch = adminDb.batch();
+        batch.set(bookingRef, bookingData);
+        batch.set(guestLinkRef, guestLinkData);
+        await batch.commit();
+
 
         console.log(`[Action: createDirectBooking] SUCCESS. Booking ${bookingRef.id} created.`);
-        return { success: true, message: 'Booking created successfully!' };
+        return { success: true, message: 'Booking created successfully!', bookingId: bookingRef.id };
     } catch (error) {
         console.error("[Action: createDirectBooking] FATAL ERROR: ", error);
         return { success: false, message: 'Failed to create booking due to a server error.' };
     }
 }
 
-
-// Function to create a new booking and generate a guest link
-export async function createBookingLink(hotelId: string, values: z.infer<typeof createBookingSchema>) {
-  console.log(`[Action: createBookingLink] START for hotel ${hotelId}`, values);
-  const { db: adminDb } = getFirebaseAdmin();
-  if (!adminDb) {
-    console.error("[Action: createBookingLink] Firestore not initialized.");
-    return { success: false, message: 'Server configuration error.' };
-  }
-
-  try {
-    const hotelRef = adminDb.collection('hotels').doc(hotelId);
-    const guestLinkRef = adminDb.collection('guestLinks').doc();
-    const bookingRef = hotelRef.collection('bookings').doc();
-
-    const bookingData = {
-        id: bookingRef.id,
-        hotelId: hotelId,
-        guestName: values.guestName,
-        checkInDate: Timestamp.fromDate(values.checkInDate),
-        checkOutDate: Timestamp.fromDate(values.checkOutDate),
-        roomType: values.roomType,
-        language: values.language, // Save language
-        status: 'pending_guest',
-        guestLinkId: guestLinkRef.id,
-        createdAt: FieldValue.serverTimestamp(),
-    };
-    
-    const guestLinkData = {
-        id: guestLinkRef.id,
-        bookingId: bookingRef.id,
-        hotelId: hotelId, // Storing hotelId for secure verification
-        isCompleted: false,
-        createdAt: FieldValue.serverTimestamp(),
-    }
-    console.log(`[Action: createBookingLink] Writing to Firestore. Booking Path: ${bookingRef.path}, Link Path: ${guestLinkRef.path}`);
-
-    // Use a batch write to ensure atomicity
-    const batch = adminDb.batch();
-    batch.set(bookingRef, bookingData);
-    batch.set(guestLinkRef, guestLinkData);
-    
-    await batch.commit();
-
-    console.log(`[Action: createBookingLink] SUCCESS. Generated link: /guest/${guestLinkRef.id}`);
-    return { success: true, message: 'Booking link created!', link: `/guest/${guestLinkRef.id}` };
-  } catch (error) {
-    console.error("[Action: createBookingLink] FATAL ERROR: ", error);
-    return { success: false, message: 'Failed to create booking link due to a server error.' };
-  }
-}
-
 // Function to get bookings for a specific hotel
 export async function getBookingsByHotel(hotelId: string): Promise<Booking[]> {
+    console.log(`[Action: getBookingsByHotel] Fetching bookings for hotel ${hotelId}`);
     const { db: adminDb } = getFirebaseAdmin();
-    if (!adminDb) {
-        console.error("[Action: getBookingsByHotel] Firestore not initialized.");
-        return [];
-    }
 
     try {
         const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
-        const snapshot = await bookingsRef.orderBy('createdAt', 'desc').get();
+        const snapshot = await bookingsRef.orderBy('checkInDate', 'desc').get();
         
         if (snapshot.empty) {
+            console.log(`[Action: getBookingsByHotel] No bookings found for hotel ${hotelId}`);
             return [];
         }
         
-        // Using convertTimestampsToDates to process each document
         const bookings = snapshot.docs.map(doc => convertTimestampsToDates(doc.data()) as Booking);
+        console.log(`[Action: getBookingsByHotel] Found ${bookings.length} bookings for hotel ${hotelId}`);
         return JSON.parse(JSON.stringify(bookings));
 
     } catch (error) {
@@ -156,11 +106,9 @@ export async function getBookingsByHotel(hotelId: string): Promise<Booking[]> {
 
 // Function to get details for a single booking
 export async function getBookingDetails(bookingId: string, hotelId: string): Promise<Booking | null> {
+    console.log(`[Action: getBookingDetails] Fetching booking ${bookingId} for hotel ${hotelId}`);
     const { db: adminDb } = getFirebaseAdmin();
-    if (!adminDb) {
-        console.error("[Action: getBookingDetails] Firestore not initialized.");
-        return null;
-    }
+    
     try {
         const bookingDoc = await adminDb.collection('hotels').doc(hotelId).collection('bookings').doc(bookingId).get();
         if (!bookingDoc.exists) {
@@ -168,6 +116,7 @@ export async function getBookingDetails(bookingId: string, hotelId: string): Pro
             return null;
         }
         const bookingData = convertTimestampsToDates(bookingDoc.data());
+        console.log(`[Action: getBookingDetails] Successfully fetched booking ${bookingId}`);
         return JSON.parse(JSON.stringify(bookingData));
     } catch (error) {
         console.error(`[Action: getBookingDetails] Error fetching booking ${bookingId}:`, error);
@@ -177,13 +126,9 @@ export async function getBookingDetails(bookingId: string, hotelId: string): Pro
 
 
 // Function for guest to submit their completed booking form
-export async function submitGuestBooking(linkId: string, formData: any) {
+export async function submitGuestBooking(linkId: string, formData: z.infer<typeof guestDetailsSchema>) {
   console.log(`[Action: submitGuestBooking] START for linkId: ${linkId}`);
   const { db: adminDb } = getFirebaseAdmin();
-  if (!adminDb) {
-    console.error("[Action: submitGuestBooking] Firestore not initialized.");
-    return { success: false, message: 'Server configuration error.' };
-  }
   
   const guestLinkRef = adminDb.collection('guestLinks').doc(linkId);
 
@@ -200,7 +145,6 @@ export async function submitGuestBooking(linkId: string, formData: any) {
        return { success: false, message: 'This booking has already been completed.' };
     }
 
-    // Securely get hotelId and bookingId from the trusted server-side document
     const { hotelId, bookingId } = linkData as { hotelId: string; bookingId: string; };
 
     const hotelRef = adminDb.collection('hotels').doc(hotelId);
@@ -223,7 +167,6 @@ export async function submitGuestBooking(linkId: string, formData: any) {
         return { success: false, message: 'Booking data is missing.' };
     }
 
-    // Prepare data to update
     const guestData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -236,10 +179,10 @@ export async function submitGuestBooking(linkId: string, formData: any) {
         guestDetails: guestData,
         documentUrl: formData.documentUrl || '',
         paymentProofUrl: formData.paymentProofUrl || '',
+        guestName: `${formData.firstName} ${formData.lastName}`, // Update guestName as well
         updatedAt: FieldValue.serverTimestamp(),
     };
     
-    // Update documents in a batch
     const batch = adminDb.batch();
     batch.update(bookingRef, bookingUpdateData);
     batch.update(guestLinkRef, { isCompleted: true, completedAt: FieldValue.serverTimestamp() });
@@ -253,7 +196,7 @@ export async function submitGuestBooking(linkId: string, formData: any) {
       hotelName: hotelData?.name || 'Your Hotel',
       checkInDate: format(bookingData.checkInDate, 'PPP'),
       checkOutDate: format(bookingData.checkOutDate, 'PPP'),
-      bookingDetails: `1x ${bookingData.roomType}`,
+      bookingDetails: `Booking for ${bookingData.rooms.length} room(s).`,
     };
   
     try {
@@ -278,12 +221,9 @@ export async function submitGuestBooking(linkId: string, formData: any) {
 }
 
 // Function to get initial booking data for the guest form
-export async function getBookingDataForGuest(linkId: string) {
+export async function getBookingDataForGuest(linkId: string): Promise<{ success: boolean; data?: BookingDataForGuest; message?: string }> {
     console.log(`[Action: getBookingDataForGuest] START for linkId: ${linkId}`);
     const { db: adminDb } = getFirebaseAdmin();
-    if (!adminDb) {
-        return { success: false, message: 'Server configuration error.' };
-    }
     
     const guestLinkRef = adminDb.collection('guestLinks').doc(linkId);
     
@@ -303,7 +243,6 @@ export async function getBookingDataForGuest(linkId: string) {
         }
 
         const hotelDoc = await adminDb.collection('hotels').doc(linkData.hotelId).get();
-        // Correct path using hotelId from the trusted linkData
         const bookingDoc = await adminDb.collection('hotels').doc(linkData.hotelId).collection('bookings').doc(linkData.bookingId).get();
         
         if (!hotelDoc.exists || !bookingDoc.exists) {
@@ -319,7 +258,7 @@ export async function getBookingDataForGuest(linkId: string) {
                 booking: convertTimestampsToDates(bookingDoc.data()),
             }
         };
-        // @ts-ignore
+        
         return JSON.parse(JSON.stringify(result));
 
     } catch (error) {

@@ -1,7 +1,6 @@
 
 'use server';
 
-import 'dotenv/config';
 import type { z } from 'zod';
 import type { createHotelSchema, Hotel } from '@/lib/definitions';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
@@ -15,85 +14,102 @@ import { format } from 'date-fns';
  * collection to ensure uniqueness.
  */
 export async function createHotel(values: z.infer<typeof createHotelSchema>) {
-  console.log("Simulating hotel creation with values:", values);
-  // This is a workaround to prevent the Firebase Admin SDK authentication error.
-  // In a real environment, the code below would write to Firestore.
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-  return { success: true, message: 'Hotel created successfully! (Simulated)', hotelId: `sim_${new Date().getTime()}` };
-
-  /*
-  // Original Firestore code that is currently causing an error
+  console.log("Creating hotel with values:", values);
   const { db } = getFirebaseAdmin();
   const hotelRef = db.collection('hotels').doc();
   const domainRef = db.collection('domains').doc(values.domain as string);
 
   try {
-    const domainDoc = await domainRef.get();
-    if (domainDoc.exists) {
-      return { success: false, message: 'This domain is already taken.' };
-    }
+    // In a transaction, check for domain uniqueness and create the hotel
+    await db.runTransaction(async (transaction) => {
+      const domainDoc = await transaction.get(domainRef);
+      if (domainDoc.exists) {
+        throw new Error('This domain is already taken.');
+      }
 
-    const hotelData = {
-      id: hotelRef.id,
-      name: values.hotelName,
-      domain: values.domain,
-      hotelierEmail: values.hotelierEmail,
-      hotelierPassword: values.hotelierPassword,
-      contactEmail: values.contactEmail,
-      contactPhone: values.contactPhone,
-      address: values.fullAddress,
-      roomCategories: values.roomCategories,
-      meals: values.meals,
-      bankDetails: {
-        accountHolder: values.bankAccountHolder,
-        bankName: values.bankName,
-        iban: values.iban,
-        bic: values.bic,
-      },
-      status: 'active',
-      createdAt: FieldValue.serverTimestamp(),
-    };
+      const hotelData = {
+        id: hotelRef.id,
+        name: values.hotelName,
+        domain: values.domain,
+        hotelierEmail: values.hotelierEmail,
+        hotelierPassword: values.hotelierPassword, // IMPORTANT: In a real app, this should be securely hashed
+        contactEmail: values.contactEmail,
+        contactPhone: values.contactPhone,
+        address: values.fullAddress,
+        roomCategories: values.roomCategories,
+        meals: values.meals,
+        bankDetails: {
+          accountHolder: values.bankAccountHolder,
+          bankName: values.bankName,
+          iban: values.iban,
+          bic: values.bic,
+        },
+        status: 'active',
+        createdAt: FieldValue.serverTimestamp(),
+      };
+      
+      transaction.set(hotelRef, hotelData);
+      transaction.set(domainRef, { hotelId: hotelRef.id });
+    });
 
-    const batch = db.batch();
-    batch.set(hotelRef, hotelData);
-    batch.set(domainRef, { hotelId: hotelRef.id });
-
-    await batch.commit();
-
+    console.log(`Hotel created successfully with ID: ${hotelRef.id}`);
     return { success: true, message: 'Hotel created successfully!', hotelId: hotelRef.id };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating hotel: ", error);
-    // @ts-ignore
     return { success: false, message: error.message || 'Failed to create hotel.' };
   }
-  */
 }
 
 
 // Function to fetch all hotels for the agency
 export async function getHotels() {
-    // Returning mock data to avoid Firebase connection errors.
-    const mockHotels = [
-        { id: 'hotel_1', name: 'Alpenresort Edelweiss', domain: 'alpenresort.com', bookings: 25, status: 'active' },
-        { id: 'hotel_2', name: 'Seehotel Bellevue', domain: 'bellevue-see.de', bookings: 42, status: 'active' },
-        { id: 'hotel_3', name: 'Stadthotel Krone', domain: 'krone-city.ch', bookings: 15, status: 'inactive' },
-    ];
-    return mockHotels;
+    console.log("[Action: getHotels] Fetching all hotels from Firestore.");
+    const { db } = getFirebaseAdmin();
+    try {
+        const hotelsSnapshot = await db.collection('hotels').orderBy('createdAt', 'desc').get();
+        if (hotelsSnapshot.empty) {
+            console.log("[Action: getHotels] No hotels found.");
+            return [];
+        }
+
+        const hotels = await Promise.all(hotelsSnapshot.docs.map(async (doc) => {
+            const hotelData = doc.data();
+            const bookingsSnapshot = await db.collection('hotels').doc(doc.id).collection('bookings').count().get();
+            const bookingsCount = bookingsSnapshot.data().count;
+            
+            return {
+                ...hotelData,
+                id: doc.id,
+                bookings: bookingsCount,
+            } as Hotel;
+        }));
+
+        console.log(`[Action: getHotels] Found ${hotels.length} hotels.`);
+        return JSON.parse(JSON.stringify(hotels));
+    } catch (error) {
+        console.error("[Action: getHotels] Error fetching hotels:", error);
+        return []; // Return empty array on error
+    }
 }
 
 
 // Get a single hotel's data by its ID
 export async function getHotelById(hotelId: string): Promise<Hotel | null> {
-    // Returning mock data to avoid Firebase connection errors.
-    const mockHotel: Hotel = {
-        id: hotelId,
-        name: 'Mock Hotel for Display',
-        address: '123 Mockingbird Lane',
-        contactEmail: 'contact@mockhotel.com',
-        contactPhone: '123-456-7890',
-        domain: 'mockhotel.com',
-    };
-    return mockHotel;
+    console.log(`[Action: getHotelById] Fetching hotel with ID: ${hotelId}`);
+    const { db } = getFirebaseAdmin();
+    try {
+        const hotelDoc = await db.collection('hotels').doc(hotelId).get();
+        if (!hotelDoc.exists) {
+            console.warn(`[Action: getHotelById] Hotel with ID ${hotelId} not found.`);
+            return null;
+        }
+        const hotelData = hotelDoc.data() as Hotel;
+        console.log(`[Action: getHotelById] Successfully fetched hotel: ${hotelData.name}`);
+        return JSON.parse(JSON.stringify({ ...hotelData, id: hotelDoc.id }));
+    } catch (error) {
+        console.error(`[Action: getHotelById] Error fetching hotel ${hotelId}:`, error);
+        return null;
+    }
 }
 
 // Helper function to convert Firestore Timestamps to JS Dates in nested objects
@@ -105,7 +121,7 @@ function convertTimestampsToDates(obj: any): any {
   if (Array.isArray(obj)) {
     return obj.map(convertTimestampsToDates);
   }
-  if (typeof obj === 'object') {
+  if (typeof obj === 'object' && obj !== null) {
     const newObj: { [key: string]: any } = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -119,36 +135,55 @@ function convertTimestampsToDates(obj: any): any {
 
 // Get dashboard data for a hotel
 export async function getHotelDashboardData(hotelId: string) {
-    const hotelDetails = await getHotelById(hotelId);
-    if (!hotelDetails) {
+    console.log(`[Action: getHotelDashboardData] Fetching data for hotel ID: ${hotelId}`);
+    const { db } = getFirebaseAdmin();
+
+    try {
+        const hotelDetails = await getHotelById(hotelId);
+        if (!hotelDetails) {
+            throw new Error("Hotel not found");
+        }
+
+        const bookingsRef = db.collection('hotels').doc(hotelId).collection('bookings');
+        
+        const confirmedBookingsSnapshot = await bookingsRef.where('status', '==', 'confirmed').get();
+        const pendingBookingsSnapshot = await bookingsRef.where('status', '==', 'pending_guest').get();
+        const allBookingsSnapshot = await bookingsRef.get();
+        
+        const confirmedBookings = confirmedBookingsSnapshot.docs;
+        const totalRevenue = confirmedBookings.reduce((sum, doc) => sum + parseFloat(doc.data().totalPrice || 0), 0);
+        
+        const recentActivitiesSnapshot = await bookingsRef.orderBy('createdAt', 'desc').limit(5).get();
+        const recentActivities = recentActivitiesSnapshot.docs.map(doc => {
+            const data = convertTimestampsToDates(doc.data());
+            return {
+                id: doc.id,
+                description: `New booking from ${data.guestName}.`,
+                timestamp: format(data.createdAt, 'dd.MM.yyyy HH:mm')
+            };
+        });
+
+        const dashboardData = {
+            hotelName: hotelDetails.name,
+            stats: {
+                totalRevenue: totalRevenue.toFixed(2),
+                totalBookings: allBookingsSnapshot.size,
+                confirmedBookings: confirmedBookings.length,
+                pendingActions: pendingBookingsSnapshot.size,
+            },
+            recentActivities,
+        };
+
+        console.log(`[Action: getHotelDashboardData] Successfully fetched data for ${hotelDetails.name}`);
+        return JSON.parse(JSON.stringify(dashboardData));
+
+    } catch (error) {
+        console.error(`[Action: getHotelDashboardData] Error fetching dashboard data for hotel ${hotelId}:`, error);
+        // Return a default structure on error
         return {
             hotelName: 'Hotel',
-            stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
+            stats: { totalRevenue: "0.00", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
             recentActivities: []
         };
     }
-
-    // Using mock data to avoid DB calls
-    const totalRevenue = (Math.random() * 50000).toFixed(2);
-    const totalBookings = Math.floor(Math.random() * 100);
-    const confirmedBookings = Math.floor(Math.random() * totalBookings);
-    const pendingActions = totalBookings - confirmedBookings;
-
-    const recentActivities = [
-        { id: '1', description: 'New booking from Max Mustermann.', timestamp: format(new Date(), 'dd.MM.yyyy HH:mm')},
-        { id: '2', description: 'Guest data for booking #A4B2C1 completed.', timestamp: format(new Date(Date.now() - 3600000), 'dd.MM.yyyy HH:mm')},
-        { id: '3', description: 'New booking from Erika Musterfrau.', timestamp: format(new Date(Date.now() - 7200000), 'dd.MM.yyyy HH:mm')},
-    ];
-
-
-    return {
-        hotelName: hotelDetails.name,
-        stats: {
-            totalRevenue,
-            totalBookings,
-            confirmedBookings,
-            pendingActions
-        },
-        recentActivities: recentActivities.slice(0, 5).map(a => ({...a, timestamp: a.timestamp.toString()})), // Return latest 5
-    };
 }
