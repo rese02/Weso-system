@@ -94,64 +94,40 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
   }
 }
 
-const mockHotels = [
-    {
-      id: 'hotel-sonnenalp',
-      name: 'Hotel Sonnenalp',
-      domain: 'sonnenalp.weso.app',
-      bookings: 125,
-      status: 'active'
-    },
-    {
-      id: 'seehotel-traum',
-      name: 'Seehotel Traum',
-      domain: 'seehotel-traum.weso.app',
-      bookings: 88,
-      status: 'active'
-    },
-    {
-        id: 'berghotel-alpenruh',
-        name: 'Berghotel Alpenruh',
-        domain: 'alpenruh.weso.app',
-        bookings: 42,
-        status: 'inactive'
-    }
-];
-
 // Function to fetch all hotels for the agency
 export async function getHotels() {
-  console.log('Fetching all hotels (using mock data)...');
-  // Returning mock data to avoid server crash
-  return Promise.resolve(mockHotels);
+    const { db: adminDb } = getFirebaseAdmin();
+    if (!adminDb) {
+        console.error("Firestore not initialized.");
+        return [];
+    }
+    try {
+        const hotelsRef = adminDb.collection('hotels');
+        const snapshot = await hotelsRef.orderBy('createdAt', 'desc').get();
+        if (snapshot.empty) {
+            return [];
+        }
+
+        const hotels = await Promise.all(snapshot.docs.map(async (doc) => {
+            const hotelData = doc.data() as Hotel;
+            // Fetch booking count for each hotel
+            const bookingsSnapshot = await adminDb.collection('hotels').doc(hotelData.id).collection('bookings').get();
+            return {
+                ...hotelData,
+                bookings: bookingsSnapshot.size, // Get the number of bookings
+                status: 'active' // Placeholder status
+            };
+        }));
+
+        return hotels;
+    } catch (error) {
+        console.error("Error fetching hotels: ", error);
+        return [];
+    }
 }
 
 // Get a single hotel's data by its ID
 export async function getHotelById(hotelId: string): Promise<Hotel | null> {
-    console.log(`Fetching hotel ${hotelId} (using mock data)...`);
-    const mockHotelData: { [key: string]: Hotel } = {
-        'hotel-sonnenalp': {
-            id: 'hotel-sonnenalp',
-            name: 'Hotel Sonnenalp',
-            address: 'Alpenstraße 1, 87561 Oberstdorf',
-            contactEmail: 'manager@hotel-sonnenalp.com',
-            contactPhone: '+49 8322 12345',
-            domain: 'sonnenalp.weso.app'
-        },
-        'seehotel-traum': {
-            id: 'seehotel-traum',
-            name: 'Seehotel Traum',
-            address: 'Seeweg 10, 82319 Starnberg',
-            contactEmail: 'manager@seehotel-traum.de',
-            contactPhone: '+49 8151 54321',
-            domain: 'seehotel-traum.weso.app'
-        }
-    };
-    
-    if (mockHotelData[hotelId]) {
-        return Promise.resolve(mockHotelData[hotelId]);
-    }
-    
-    // Fallback for any other ID to prevent crashes
     const { db: adminDb } = getFirebaseAdmin();
     if (!adminDb) {
       console.error("Firestore not initialized.");
@@ -174,41 +150,68 @@ export async function getHotelById(hotelId: string): Promise<Hotel | null> {
 
 // Placeholder to get the dashboard data for a hotel
 export async function getHotelDashboardData(hotelId: string) {
-    console.log(`Fetching dashboard data for hotel ${hotelId}...`);
+    const { db: adminDb } = getFirebaseAdmin();
     const hotelDetails = await getHotelById(hotelId);
     
-    const defaultData = {
-        hotelName: hotelDetails?.name ?? 'Hotel',
-        stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
-        recentActivities: []
-    }
-
-    if (!hotelDetails) {
-        return defaultData;
+    if (!hotelDetails || !adminDb) {
+        return {
+            hotelName: 'Hotel',
+            stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
+            recentActivities: []
+        };
     }
     
-    // Mocking dashboard data as well
-    const mockDashboardData: any = {
-        'hotel-sonnenalp': {
-            stats: { totalRevenue: "10,500", totalBookings: 25, confirmedBookings: 15, pendingActions: 5 },
-            recentActivities: [
-                { id: '1', description: 'Buchung für Max Mustermann wurde aktualisiert. Status: confirmed', timestamp: formatDistanceToNow(new Date(), { addSuffix: true, locale: de })},
-                { id: '2', description: 'Buchung für Erika Mustermann wurde aktualisiert. Status: pending_guest', timestamp: formatDistanceToNow(new Date(Date.now() - 1000 * 60 * 60 * 2), { addSuffix: true, locale: de })},
-            ]
-        },
-        'seehotel-traum': {
-            stats: { totalRevenue: "8,200", totalBookings: 20, confirmedBookings: 12, pendingActions: 3 },
-            recentActivities: [
-                { id: '3', description: 'Buchung für John Doe wurde aktualisiert. Status: confirmed', timestamp: formatDistanceToNow(new Date(), { addSuffix: true, locale: de })},
-            ]
-        }
-    };
-    
-    const dashboardData = mockDashboardData[hotelId] ?? defaultData;
+    try {
+        const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
+        const bookingsSnapshot = await bookingsRef.get();
+        
+        let totalRevenue = 0;
+        let totalBookings = 0;
+        let confirmedBookings = 0;
+        let pendingActions = 0;
+        
+        const recentActivities = bookingsSnapshot.docs
+            .map(doc => ({ ...doc.data(), id: doc.id }))
+             // @ts-ignore
+            .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+            .slice(0, 5)
+            .map(booking => ({
+                id: booking.id,
+                // @ts-ignore
+                description: `Booking for ${booking.guestName} was updated. Status: ${booking.status}`,
+                 // @ts-ignore
+                timestamp: formatDistanceToNow(booking.createdAt.toDate(), { addSuffix: true, locale: de })
+            }));
 
-    return {
-        hotelName: hotelDetails.name,
-        stats: dashboardData.stats,
-        recentActivities: dashboardData.recentActivities
+        bookingsSnapshot.forEach(doc => {
+            const booking = doc.data();
+            totalBookings++;
+            if (booking.status === 'confirmed') {
+                confirmedBookings++;
+                // In a real app, price would be a number
+                totalRevenue += parseFloat(booking.totalPrice || "0");
+            }
+            if (booking.status === 'pending_guest') {
+                pendingActions++;
+            }
+        });
+        
+        return {
+            hotelName: hotelDetails.name,
+            stats: {
+                totalRevenue: totalRevenue.toFixed(2),
+                totalBookings,
+                confirmedBookings,
+                pendingActions
+            },
+            recentActivities
+        };
+    } catch (error) {
+        console.error(`Error fetching dashboard data for hotel ${hotelId}:`, error);
+        return {
+            hotelName: hotelDetails.name,
+            stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
+            recentActivities: []
+        };
     }
 }

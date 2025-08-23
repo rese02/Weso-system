@@ -28,6 +28,7 @@ type EditBookingFormValues = z.infer<typeof editBookingSchema>;
 
 export default function EditBookingPage() {
   const params = useParams();
+  const hotelId = params.hotelId as string;
   const bookingId = params.bookingId as string;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,11 +38,11 @@ export default function EditBookingPage() {
   });
 
   useEffect(() => {
-    if (!bookingId) return;
+    if (!bookingId || !hotelId) return;
 
     async function fetchBooking() {
       setIsLoading(true);
-      const bookingData = await getBookingDetails(bookingId);
+      const bookingData = await getBookingDetails(bookingId, hotelId);
       if (bookingData) {
         const dataWithDates = {
             ...bookingData,
@@ -54,7 +55,7 @@ export default function EditBookingPage() {
       setIsLoading(false);
     }
     fetchBooking();
-  }, [bookingId, form]);
+  }, [bookingId, hotelId, form]);
 
   const onSubmit = (data: EditBookingFormValues) => {
     console.log('Submitting updated booking data:', data);

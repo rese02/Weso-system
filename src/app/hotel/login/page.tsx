@@ -18,11 +18,6 @@ export default function HotelierLoginPage() {
         </CardHeader>
         <CardContent>
           <HotelierLoginForm />
-          <div className="mt-6 text-center text-sm">
-            <Link href="/agency/login" className="text-primary hover:underline">
-              Are you an agency administrator?
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </main>

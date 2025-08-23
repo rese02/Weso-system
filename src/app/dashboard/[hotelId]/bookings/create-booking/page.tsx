@@ -6,6 +6,7 @@ import type { z } from 'zod';
 import { hotelDirectBookingSchema } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { useParams, useRouter } from 'next/navigation';
+import { createDirectBooking } from '@/lib/actions/booking.actions';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,13 +49,20 @@ export default function CreateBookingPage() {
   });
 
   const onSubmit = async (values: CreateBookingFormValues) => {
-    // In a real app, this would call a server action to create the booking directly.
-    console.log({ hotelId, ...values });
-    toast({
-      title: "Buchung erfolgreich erstellt!",
-      description: `Die Buchung für ${values.firstName} ${values.lastName} wurde angelegt.`,
-    });
-    router.push(`/dashboard/${hotelId}/bookings`);
+    const result = await createDirectBooking(hotelId, values);
+    if (result.success) {
+        toast({
+            title: "Buchung erfolgreich erstellt!",
+            description: `Die Buchung für ${values.firstName} ${values.lastName} wurde angelegt.`,
+        });
+        router.push(`/dashboard/${hotelId}/bookings`);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Fehler beim Erstellen der Buchung",
+            description: result.message || "Bitte versuchen Sie es erneut.",
+        });
+    }
   };
 
   return (
