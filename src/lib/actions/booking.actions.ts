@@ -213,35 +213,47 @@ export async function submitGuestBooking(linkId: string, formData: any) {
 
 // Function to get initial booking data for the guest form
 export async function getBookingDataForGuest(linkId: string) {
+    console.log(`[Action: getBookingDataForGuest] START for linkId: ${linkId}`);
     if (!adminDb) {
         return { success: false, message: 'Server configuration error.' };
     }
     
     const guestLinkRef = adminDb.collection('guestLinks').doc(linkId);
-    const linkDoc = await guestLinkRef.get();
-
-    if (!linkDoc.exists) {
-        return { success: false, message: 'Invalid booking link.' };
-    }
-
-    const linkData = linkDoc.data() as { hotelId: string, bookingId: string, isCompleted: boolean };
-
-     if (linkData.isCompleted) {
-       return { success: false, message: 'This booking has already been completed.' };
-    }
-
-    const hotelDoc = await adminDb.collection('hotels').doc(linkData.hotelId).get();
-    const bookingDoc = await adminDb.collection('bookings').doc(linkData.bookingId).get();
     
-    if (!hotelDoc.exists || !bookingDoc.exists) {
-        return { success: false, message: 'Could not find hotel or booking.' };
-    }
+    try {
+        const linkDoc = await guestLinkRef.get();
 
-    return {
-        success: true,
-        data: {
-            hotel: convertTimestampsToDates(hotelDoc.data()),
-            booking: convertTimestampsToDates(bookingDoc.data()),
+        if (!linkDoc.exists) {
+            console.warn(`[Action: getBookingDataForGuest] Invalid linkId: ${linkId}`);
+            return { success: false, message: 'This booking link is invalid or has expired.' };
         }
-    };
+
+        const linkData = linkDoc.data() as { hotelId: string, bookingId: string, isCompleted: boolean };
+
+        if (linkData.isCompleted) {
+            console.warn(`[Action: getBookingDataForGuest] Booking already completed for linkId: ${linkId}`);
+            return { success: false, message: 'This booking has already been completed.' };
+        }
+
+        const hotelDoc = await adminDb.collection('hotels').doc(linkData.hotelId).get();
+        // Correct path using hotelId from the trusted linkData
+        const bookingDoc = await adminDb.collection('hotels').doc(linkData.hotelId).collection('bookings').doc(linkData.bookingId).get();
+        
+        if (!hotelDoc.exists || !bookingDoc.exists) {
+            console.error(`[Action: getBookingDataForGuest] Mismatch: Hotel or Booking not found. Hotel exists: ${hotelDoc.exists}, Booking exists: ${bookingDoc.exists}`);
+            return { success: false, message: 'Could not find the associated hotel or booking information.' };
+        }
+
+        console.log(`[Action: getBookingDataForGuest] SUCCESS for linkId: ${linkId}`);
+        return {
+            success: true,
+            data: {
+                hotel: convertTimestampsToDates(hotelDoc.data()),
+                booking: convertTimestampsToDates(bookingDoc.data()),
+            }
+        };
+    } catch (error) {
+        console.error(`[Action: getBookingDataForGuest] FATAL ERROR for linkId ${linkId}:`, error);
+        return { success: false, message: 'An unexpected server error occurred.' };
+    }
 }

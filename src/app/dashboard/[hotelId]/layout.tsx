@@ -64,7 +64,7 @@ export default async function HotelierLayout({
               title="Hotel Dashboard"
               user={{ name: hotel.name, email: "manager@hotel.com" }}
             />
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
               {children}
             </main>
         </div>

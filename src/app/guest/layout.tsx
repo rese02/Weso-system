@@ -14,7 +14,7 @@ export default function GuestLayout({
             <span>HotelHub Central</span>
         </Link>
       </header>
-      <main className="flex-1 flex items-center justify-center py-8">
+      <main className="flex-1 flex flex-col items-center justify-center py-8">
         {children}
       </main>
       <footer className="p-4 text-center text-sm text-muted-foreground border-t bg-background">

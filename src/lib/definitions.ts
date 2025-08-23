@@ -21,6 +21,7 @@ export type Booking = {
   id: string;
   hotelId: string;
   guestId?: string;
+  guestName: string;
   checkInDate: Date;
   checkOutDate: Date;
   roomType: string;
@@ -37,6 +38,11 @@ export type GuestLink = {
     createdAt: Date;
     expiresAt?: Date;
 };
+
+export type BookingDataForGuest = {
+    hotel: any;
+    booking: Booking;
+}
 
 // Zod Schemas for validation
 export const createHotelSchema = z.object({
