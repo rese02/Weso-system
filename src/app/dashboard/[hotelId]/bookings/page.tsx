@@ -10,96 +10,136 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, CheckCircle, Clock, Eye, Copy, AlertCircle, CircleOff } from 'lucide-react';
 import { getBookingsByHotel } from '@/lib/actions/booking.actions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default async function BookingsPage({ params }: { params: { hotelId: string } }) {
   const bookings = await getBookingsByHotel(params.hotelId);
 
-  const getBadgeVariant = (status: string) => {
+  const getStatusInfo = (status: string): { text: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode } => {
     switch (status) {
       case 'confirmed':
-        return 'default';
+        return { text: 'Bestätigt', variant: 'default', icon: <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> };
       case 'pending_guest':
-        return 'secondary';
+        return { text: 'Ausstehend', variant: 'secondary', icon: <Clock className="h-3.5 w-3.5 mr-1.5" /> };
       case 'cancelled':
-        return 'destructive';
+        return { text: 'Storniert', variant: 'destructive', icon: <AlertCircle className="h-3.5 w-3.5 mr-1.5" /> };
       default:
-        return 'outline';
+        return { text: 'Unbekannt', variant: 'outline', icon: <CircleOff className="h-3.5 w-3.5 mr-1.5" /> };
+    }
+  };
+  
+   const getPaymentStatusInfo = (status: string): { text: string; icon: React.ReactNode } => {
+    // This is a placeholder as payment status is not in the data model yet
+    switch (status) {
+      case 'confirmed': // Assuming 'confirmed' booking means partial payment
+        return { text: 'Teilzahlung', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-yellow-600" /> };
+      case 'pending_guest':
+        return { text: 'Offen', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-red-600" /> };
+      default:
+        return { text: 'Offen', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-red-600" /> };
     }
   };
 
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-headline text-3xl md:text-4xl font-bold">Manage Bookings</h1>
-          <p className="text-muted-foreground">View, edit, and create new bookings for your hotel.</p>
+          <h1 className="font-headline text-3xl md:text-4xl font-bold">Buchungsübersicht</h1>
+          <p className="text-muted-foreground">Alle Buchungen für Ihr Hotel anzeigen und verwalten.</p>
         </div>
-        <Button asChild>
-          <Link href={`/dashboard/${params.hotelId}/bookings/create-booking`}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Booking
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant="outline">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Löschen
+            </Button>
+            <Button asChild>
+              <Link href={`/dashboard/${params.hotelId}/bookings/create-booking`}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Buchung erstellen
+              </Link>
+            </Button>
+        </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>All Bookings</CardTitle>
-          <CardDescription>A list of all bookings for this hotel.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Guest Name</TableHead>
-                <TableHead>Room Type</TableHead>
+                <TableHead className="w-[50px] px-4"><Checkbox/></TableHead>
+                <TableHead>Buchungs-ID</TableHead>
+                <TableHead>Gast</TableHead>
                 <TableHead>Check-in</TableHead>
                 <TableHead>Check-out</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Letzte Änderung</TableHead>
+                <TableHead>Zahlungsstatus</TableHead>
+                <TableHead className="text-right pr-4">Aktionen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     No bookings found.
                   </TableCell>
                 </TableRow>
               ) : (
-                bookings.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell className="font-medium">{booking.guestDetails ? `${booking.guestDetails.firstName} ${booking.guestDetails.lastName}` : booking.guestName}</TableCell>
-                  <TableCell>{booking.roomType}</TableCell>
-                  <TableCell>{format(new Date(booking.checkInDate), 'dd MMM yyyy')}</TableCell>
-                  <TableCell>{format(new Date(booking.checkOutDate), 'dd MMM yyyy')}</TableCell>
-                  <TableCell>
-                    <Badge variant={getBadgeVariant(booking.status)} className="capitalize">{booking.status.replace('_', ' ')}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}`}>View Details</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}/edit`}>Edit Booking</Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )))}
+                bookings.map((booking) => {
+                  const statusInfo = getStatusInfo(booking.status);
+                  const paymentStatusInfo = getPaymentStatusInfo(booking.status);
+                  return (
+                    <TableRow key={booking.id}>
+                        <TableCell className="px-4"><Checkbox/></TableCell>
+                        <TableCell className="font-mono text-muted-foreground">{booking.id.substring(0, 6).toUpperCase()}</TableCell>
+                        <TableCell className="font-medium">{booking.guestDetails ? `${booking.guestDetails.firstName} ${booking.guestDetails.lastName}` : booking.guestName}</TableCell>
+                        <TableCell>{format(new Date(booking.checkInDate), 'dd.MM.yyyy')}</TableCell>
+                        <TableCell>{format(new Date(booking.checkOutDate), 'dd.MM.yyyy')}</TableCell>
+                        <TableCell>
+                            <Badge variant={statusInfo.variant} className={`flex items-center w-fit ${statusInfo.variant === 'default' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}`}>
+                                {statusInfo.icon}
+                                <span>{statusInfo.text}</span>
+                            </Badge>
+                        </TableCell>
+                        <TableCell>{booking.updatedAt ? format(new Date(booking.updatedAt), 'dd.MM.yyyy, HH:mm:ss') : 'N/A'}</TableCell>
+                        <TableCell>
+                             <Badge variant="outline" className="flex items-center w-fit bg-gray-100 text-gray-800 border-gray-200">
+                                {paymentStatusInfo.icon}
+                                <span>{paymentStatusInfo.text}</span>
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right pr-4">
+                            <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}`}><Eye className="h-4 w-4" /></Link>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Link href={`/dashboard/${params.hotelId}/bookings/${booking.id}/edit`}><Copy className="h-4 w-4" /></Link>
+                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem>Als bestätigt markieren</DropdownMenuItem>
+                                        <DropdownMenuItem>Rechnung senden</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive">Buchung stornieren</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
             </TableBody>
           </Table>
         </CardContent>
