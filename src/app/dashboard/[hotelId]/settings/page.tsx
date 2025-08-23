@@ -3,10 +3,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { getHotelById } from '@/lib/actions/hotel.actions';
-import { Settings } from 'lucide-react';
+import { Settings, AlertCircle } from 'lucide-react';
 
 export default async function HotelSettingsPage({ params }: { params: { hotelId: string } }) {
   const hotel = await getHotelById(params.hotelId);
+
+  if (!hotel) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4 text-destructive">
+            <AlertCircle className="h-8 w-8" />
+            <div>
+              <CardTitle className="font-headline text-2xl">Hotel not found</CardTitle>
+              <CardDescription>
+                Could not load settings for hotel with ID: {params.hotelId}. It may not exist or there was a server error.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -39,13 +57,13 @@ export default async function HotelSettingsPage({ params }: { params: { hotelId:
                 </div>
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="hotel-city">City</Label>
-                    <Input id="hotel-city" defaultValue={hotel.city} />
+                 <div className="space-y-2">
+                    <Label htmlFor="contact-email">Contact Email</Label>
+                    <Input id="contact-email" type="email" defaultValue={hotel.contactEmail} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="hotel-country">Country</Label>
-                    <Input id="hotel-country" defaultValue={hotel.country} />
+                    <Label htmlFor="contact-phone">Contact Phone</Label>
+                    <Input id="contact-phone" defaultValue={hotel.contactPhone} />
                 </div>
             </div>
             <div className="flex justify-end">
