@@ -164,6 +164,7 @@ export default function CreateBookingPage() {
                             <SelectContent>
                                 <SelectItem value="de">Deutsch</SelectItem>
                                 <SelectItem value="en">Englisch</SelectItem>
+                                <SelectItem value="it">Italienisch</SelectItem>
                             </SelectContent>
                         </Select>
                         <FormMessage />

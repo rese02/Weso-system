@@ -99,6 +99,7 @@ export const createBookingSchema = z.object({
   checkInDate: z.date({ required_error: "Check-in date is required." }),
   checkOutDate: z.date({ required_error: "Check-out date is required." }),
   roomType: z.string().min(3, { message: "Room type is required." }),
+  language: z.string(),
 }).refine(data => data.checkInDate < data.checkOutDate, {
   message: "Check-out date must be after check-in date.",
   path: ["checkOutDate"],

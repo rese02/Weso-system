@@ -93,6 +93,7 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
         checkInDate: Timestamp.fromDate(values.checkInDate),
         checkOutDate: Timestamp.fromDate(values.checkOutDate),
         roomType: values.roomType,
+        language: values.language, // Save language
         status: 'pending_guest',
         guestLinkId: guestLinkRef.id,
         createdAt: FieldValue.serverTimestamp(),
