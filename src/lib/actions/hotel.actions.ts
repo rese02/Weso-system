@@ -2,70 +2,137 @@
 'use server';
 
 import type { z } from 'zod';
-import type { createHotelSchema, Hotel } from '@/lib/definitions';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { format } from 'date-fns';
+import type { Hotel } from '@/lib/definitions';
+
+
+// This is the new, more robust createHotel action based on user feedback.
+// The old `createHotel` function that took form values is replaced by this.
+// The front-end form (`create-hotel/page.tsx`) will need to be adapted to call this action
+// with the appropriate, simplified input. For now, we are providing the new backend logic.
+
+const CreateHotelSchema = z.object({
+  name: z.string().min(2, "Hotel name must be at least 2 characters."),
+  // The agency user ID should be passed from the authenticated session
+  ownerId: z.string().min(1, "Owner ID is required."), 
+  address: z.string().optional(),
+  timezone: z.string().optional(),
+  currency: z.string().optional(),
+  locale: z.string().optional(),
+});
+
+export type CreateHotelInput = z.infer<typeof CreateHotelSchema>;
 
 /**
- * Creates a new hotel in Firestore.
- * This function takes the validated form data and creates a new document
- * in the 'hotels' collection. It also adds the domain to a 'domains'
- * collection to ensure uniqueness.
+ * Creates a hotel document, a default wizardConfig, and seeds a default room.
+ * - Creates a document in /hotels/{hotelId}
+ * - Creates /hotels/{hotelId}/wizardConfig/default
+ * - Creates /hotels/{hotelId}/rooms/{roomId} with a default room
  */
-export async function createHotel(values: z.infer<typeof createHotelSchema>) {
-    console.log("[Action: createHotel] Attempting to create hotel with data:", values.hotelName);
+export async function createHotel(input: CreateHotelInput) {
+    const parsed = CreateHotelSchema.parse(input);
     const { db } = getFirebaseAdmin();
-    const batch = db.batch();
-
     const hotelRef = db.collection('hotels').doc();
-    const domainRef = db.collection('domains').doc(values.domain || hotelRef.id);
+    const now = FieldValue.serverTimestamp();
+
+    const hotelDoc = {
+        name: parsed.name,
+        address: parsed.address || null,
+        ownerId: parsed.ownerId, // This would be the agency's user ID
+        timezone: parsed.timezone || 'Europe/Rome',
+        currency: parsed.currency || 'EUR',
+        locale: parsed.locale || 'de-DE',
+        settings: {
+            allowGuestUploads: true,
+            maxUploadMb: 10,
+            bookingLinkExpiryHours: 48,
+        },
+        createdAt: now,
+        updatedAt: now,
+    };
+
+    const defaultWizard = {
+        createdAt: now,
+        updatedAt: now,
+        steps: [
+            {
+                id: 'guest-info',
+                title: 'Gäste Informationen',
+                description: 'Name, Kontakt & Adresse',
+                inputs: [
+                    { key: 'firstName', label: 'Vorname', type: 'text', required: true },
+                    { key: 'lastName', label: 'Nachname', type: 'text', required: true },
+                    { key: 'email', label: 'E‑Mail', type: 'email', required: true },
+                    { key: 'phone', label: 'Telefon', type: 'tel', required: false },
+                ],
+            },
+            {
+                id: 'documents',
+                title: 'Dokumente',
+                description: 'Lade Ausweis/Pass hoch (falls erforderlich)',
+                inputs: [
+                    { key: 'id_document', label: 'Ausweis / Reisepass', type: 'file', required: false },
+                ],
+            },
+            {
+                id: 'confirm',
+                title: 'Bestätigung',
+                description: 'Einwilligungen & Check',
+                inputs: [
+                    { key: 'consent_gdpr', label: 'Einwilligung zur Datenverarbeitung', type: 'checkbox', required: true },
+                ],
+            },
+        ],
+    };
+    
+    const defaultRoom = {
+        title: 'Standardzimmer',
+        description: 'Standardmäßig angelegtes Zimmer',
+        capacity: 2,
+        price: 0,
+        createdAt: now,
+        updatedAt: now,
+    };
+    
+    const defaultBookingTemplate = {
+        title: 'Standard Buchungsvorlage',
+        description: 'Vorlage für neue Buchungen',
+        createdAt: now,
+        updatedAt: now,
+        template: {
+            allowPartialPayments: false,
+        },
+    };
 
     try {
-        // Check if the domain is already taken
-        const domainDoc = await domainRef.get();
-        if (domainDoc.exists) {
-            console.warn(`[Action: createHotel] Domain '${values.domain}' already exists.`);
-            return { success: false, message: 'This domain is already registered. Please choose another one.' };
-        }
-
-        const newHotelData = {
-            id: hotelRef.id,
-            name: values.hotelName,
-            domain: values.domain || '',
-            // logo: values.logo, // Logo upload needs to be handled separately (e.g., upload to Cloud Storage)
-            hotelierEmail: values.hotelierEmail,
-            hotelierPassword: values.hotelierPassword, // IMPORTANT: Hash password in a real app
-            contactEmail: values.contactEmail,
-            contactPhone: values.contactPhone,
-            address: values.fullAddress,
-            meals: values.meals,
-            roomCategories: values.roomCategories,
-            bankDetails: {
-                accountHolder: values.bankAccountHolder,
-                iban: values.iban,
-                bic: values.bic,
-                bankName: values.bankName,
-            },
-            status: 'active',
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        };
-
-        batch.set(hotelRef, newHotelData);
-        batch.set(domainRef, { hotelId: hotelRef.id });
-
-        await batch.commit();
+        await db.runTransaction(async (tx) => {
+            tx.set(hotelRef, hotelDoc);
+            
+            const wizardRef = hotelRef.collection('wizardConfig').doc('default');
+            tx.set(wizardRef, defaultWizard);
+            
+            const roomRef = hotelRef.collection('rooms').doc();
+            tx.set(roomRef, defaultRoom);
+            
+            const bookingTemplateRef = hotelRef.collection('bookingTemplates').doc('default');
+            tx.set(bookingTemplateRef, defaultBookingTemplate);
+        });
 
         console.log(`[Action: createHotel] Successfully created hotel with ID: ${hotelRef.id}`);
-        return { success: true, message: 'Hotel created successfully!', hotelId: hotelRef.id };
-
-    } catch (error) {
-        console.error("[Action: createHotel] Error creating hotel: ", error);
-        if (error instanceof Error) {
-            return { success: false, message: error.message };
-        }
-        return { success: false, message: 'An unexpected error occurred while creating the hotel.' };
+        return {
+            success: true,
+            hotelId: hotelRef.id,
+            message: 'Hotel angelegt und mit Default Wizard + Room geseedet.',
+        };
+    } catch (err) {
+        console.error('[Action: createHotel] Transaction error', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        return {
+            success: false,
+            error: errorMessage,
+        };
     }
 }
 
@@ -83,15 +150,15 @@ export async function getHotels() {
 
         const hotels = await Promise.all(hotelsSnapshot.docs.map(async (doc) => {
             const hotelData = doc.data();
-            const bookingsSnapshot = await db.collection('hotels').doc(doc.id).collection('bookings').count().get();
+            // Count bookings in the top-level collection for this hotel
+            const bookingsSnapshot = await db.collection('bookings').where('hotelId', '==', doc.id).count().get();
             const bookingsCount = bookingsSnapshot.data().count;
             
             return {
                 ...hotelData,
                 id: doc.id,
                 bookings: bookingsCount,
-                // Ensure status is always present for the UI
-                status: hotelData.status || 'inactive',
+                status: hotelData.status || 'active',
             };
         }));
 
@@ -99,7 +166,7 @@ export async function getHotels() {
         return JSON.parse(JSON.stringify(hotels));
     } catch (error) {
         console.error("[Action: getHotels] Error fetching hotels:", error);
-        return []; // Return empty array on error
+        return [];
     }
 }
 
@@ -155,16 +222,16 @@ export async function getHotelDashboardData(hotelId: string) {
             throw new Error("Hotel not found");
         }
 
-        const bookingsRef = db.collection('hotels').doc(hotelId).collection('bookings');
+        const bookingsRef = db.collection('bookings');
         
-        const confirmedBookingsSnapshot = await bookingsRef.where('status', '==', 'confirmed').get();
-        const pendingBookingsSnapshot = await bookingsRef.where('status', '==', 'pending_guest').get();
-        const allBookingsSnapshot = await bookingsRef.get();
+        const confirmedBookingsSnapshot = await bookingsRef.where('hotelId', '==', hotelId).where('status', '==', 'confirmed').get();
+        const pendingBookingsSnapshot = await bookingsRef.where('hotelId', '==', hotelId).where('status', '==', 'pending_guest').get();
+        const allBookingsSnapshot = await bookingsRef.where('hotelId', '==', hotelId).get();
         
         const confirmedBookings = confirmedBookingsSnapshot.docs;
         const totalRevenue = confirmedBookings.reduce((sum, doc) => sum + parseFloat(doc.data().totalPrice || 0), 0);
         
-        const recentActivitiesSnapshot = await bookingsRef.orderBy('createdAt', 'desc').limit(5).get();
+        const recentActivitiesSnapshot = await bookingsRef.where('hotelId', '==', hotelId).orderBy('createdAt', 'desc').limit(5).get();
         const recentActivities = recentActivitiesSnapshot.docs.map(doc => {
             const data = convertTimestampsToDates(doc.data());
             return {
@@ -190,7 +257,6 @@ export async function getHotelDashboardData(hotelId: string) {
 
     } catch (error) {
         console.error(`[Action: getHotelDashboardData] Error fetching dashboard data for hotel ${hotelId}:`, error);
-        // Return a default structure on error to prevent crashes
         return {
             hotelName: 'Hotel',
             stats: { totalRevenue: "0.00", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },

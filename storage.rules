@@ -1,12 +1,28 @@
-rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow write access only for authenticated users
-    // This covers guest document and payment proof uploads.
+
+    // Booking documents: /bookings/{bookingId}/documents/{file}
+    match /bookings/{bookingId}/documents/{allPaths=**} {
+      // Allow write only for authenticated users whose custom token contains bookingId claim
+      allow write: if request.auth != null
+                   && request.auth.token.bookingId == bookingId
+                   && request.resource.size < (10 * 1024 * 1024) // max 10 MB
+                   && request.resource.contentType.matches('image/.*') == true
+                   || request.resource.contentType == 'application/pdf';
+
+      // Allow read for guest (same booking) and agency/hotel staff
+      allow read: if request.auth != null && (request.auth.token.bookingId == bookingId || request.auth.token.role == 'agency' || request.auth.token.hotelId == bookingId);
+    }
+
+    // Hotel-wide documents (z. B. assets): /hotels/{hotelId}/assets/{file}
+    match /hotels/{hotelId}/assets/{allPaths=**} {
+      allow read: if true; // öffentliche Assets (Bilder, CSS) - passe an falls private
+      allow write: if request.auth != null && request.auth.token.role == 'agency';
+    }
+
+    // Default: deny everything else
     match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

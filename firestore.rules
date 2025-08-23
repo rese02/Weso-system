@@ -1,16 +1,53 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Deny all reads and writes by default.
-    match /{document=**} {
-      allow read, write: if false;
+
+    // bookingTokens: nur server-side lesbar (keine Client-Reads)
+    match /bookingTokens/{tokenId} {
+      allow read: if false;
+      allow write: if request.auth != null && request.auth.token.role == 'agency';
     }
 
-    // Allow access to users and hotels for authenticated users.
-    // This is a placeholder and should be refined with specific role-based access control.
-    match /(users|hotels|bookings|guestLinks)/{id} {
-        allow read, write: if request.auth != null;
+    // Hotels: nur Agency oder Hotel-Owner (custom claims) dürfen schreiben
+    match /hotels/{hotelId} {
+      allow create: if request.auth != null && request.auth.token.role == 'agency';
+      allow read: if request.auth != null && (request.auth.token.role == 'agency' || request.auth.token.ownerHotelId == hotelId);
+      allow update, delete: if request.auth != null && request.auth.token.role == 'agency';
+    }
+
+    // Subcollections unter hotels (wizardConfig, rooms, bookingTemplates)
+    match /hotels/{hotelId}/{doc=**} {
+      allow read: if request.auth != null && (request.auth.token.role == 'agency' || request.auth.token.ownerHotelId == hotelId);
+      allow write: if request.auth != null && request.auth.token.role == 'agency';
+    }
+
+    // Global bookings collection. booking doc must include hotelId. Agency and hotel staff allowed.
+    match /bookings/{bookingId} {
+      allow create: if request.auth != null && request.auth.token.role in ['agency', 'hotelier'];
+      allow read: if request.auth != null && (request.auth.token.role == 'agency' || request.auth.token.hotelId == resource.data.hotelId || request.auth.token.hotelId == request.resource.data.hotelId);
+      allow update, delete: if request.auth != null && request.auth.token.role == 'agency';
+    }
+
+    // Guests inside bookings (where guest form answers are saved)
+    match /bookings/{bookingId}/guests/{guestId} {
+      // Guests write their own record only if authenticated with a custom token that includes bookingId claim
+      allow create: if request.auth != null && request.auth.token.bookingId == bookingId;
+      allow read: if request.auth != null && (request.auth.token.bookingId == bookingId || request.auth.token.role == 'agency' || request.auth.token.hotelId == resource.data.hotelId);
+      allow update: if request.auth != null && (request.auth.token.bookingId == bookingId || request.auth.token.role == 'agency');
+      allow delete: if false; // deletions only via server-side admin action
+    }
+
+    // Documents metadata for bookings
+    match /bookings/{bookingId}/documents/{docId} {
+      allow create: if request.auth != null && request.auth.token.bookingId == bookingId;
+      allow read: if request.auth != null && (request.auth.token.bookingId == bookingId || request.auth.token.role == 'agency' || request.auth.token.hotelId == resource.data.hotelId);
+      allow update: if request.auth != null && request.auth.token.role == 'agency';
+      allow delete: if request.auth != null && request.auth.token.role == 'agency';
+    }
+
+    // Fallback deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
