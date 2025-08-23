@@ -9,6 +9,7 @@ import { z } from 'zod';
 import type { createHotelSchema } from '@/lib/definitions';
 import type { Hotel } from '@/lib/definitions';
 
+
 const CreateHotelServerSchema = z.object({
   hotelName: z.string().min(3),
   domain: z.string().optional(),
@@ -34,6 +35,7 @@ const CreateHotelServerSchema = z.object({
  * - Legt /hotels/{hotelId}/rooms/{roomId} mit einem Default-Room an
  */
 export async function createHotel(values: z.infer<typeof createHotelSchema> & { ownerId: string }) {
+  console.log('admin.apps.length', getFirebaseAdmin() ? 'SDK seems loaded' : 'SDK not loaded');
   const parsed = CreateHotelServerSchema.parse(values);
 
   const { db } = getFirebaseAdmin();
@@ -185,7 +187,8 @@ export async function getHotelById(hotelId: string): Promise<Hotel | null> {
             console.warn(`[Action: getHotelById] Hotel ${hotelId} not found.`);
             return null;
         }
-        return { id: hotelDoc.id, ...hotelDoc.data() } as Hotel;
+        const data = { id: hotelDoc.id, ...hotelDoc.data() } as Hotel;
+        return JSON.parse(JSON.stringify(data));
     } catch (error) {
         console.error(`[Action: getHotelById] Error fetching hotel ${hotelId}:`, error);
         return null;
@@ -230,8 +233,8 @@ export async function getHotelDashboardData(hotelId: string) {
                     timestamp: new Date(booking.createdAt.toMillis()).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
                 };
             });
-
-        return {
+            
+        const data = {
             hotelName: hotelDoc.data()?.name || 'Unnamed Hotel',
             stats: {
                 totalRevenue: totalRevenue.toFixed(2),
@@ -241,6 +244,9 @@ export async function getHotelDashboardData(hotelId: string) {
             },
             recentActivities,
         };
+
+        return JSON.parse(JSON.stringify(data));
+
     } catch (error) {
         console.error(`[Action: getHotelDashboardData] Error fetching data for hotel ${hotelId}:`, error);
         return null;

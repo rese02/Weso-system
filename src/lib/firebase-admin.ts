@@ -17,6 +17,8 @@ function initializeFirebaseAdmin(): FirebaseAdmin {
   if (admin.apps.length === 0) {
     try {
       console.log('Initializing Firebase Admin SDK...');
+      // initializeApp() ohne Argumente funktioniert in Google-Cloud-Umgebungen (wie Firebase),
+      // da die Credentials automatisch erkannt werden (Application Default Credentials).
       admin.initializeApp();
       console.log('Firebase Admin SDK initialized successfully.');
     } catch (error) {
@@ -39,9 +41,3 @@ export function getFirebaseAdmin(): FirebaseAdmin {
   }
   return adminInstance;
 }
-
-// For convenience, you can still export the services directly,
-// but they will be lazily initialized.
-const { auth: adminAuth, db: adminDb, storage: adminStorage } = getFirebaseAdmin();
-
-export { adminAuth, adminDb, adminStorage };
