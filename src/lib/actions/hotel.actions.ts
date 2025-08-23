@@ -57,9 +57,9 @@ export async function getHotels() {
   const testHotel = {
       id: 'hotel-sonnenalp',
       name: 'Hotel Sonnenalp',
-      city: 'Alpenstadt',
-      country: 'Österreich',
-      bookings: 128
+      domain: 'hotel-sonnenalp.de',
+      bookings: 128,
+      status: 'active'
   };
   // In a real scenario, you'd fetch this from Firestore and remove the test data.
   // return [testHotel, ...firestoreHotels];

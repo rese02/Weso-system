@@ -4,13 +4,20 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Hotel, BedDouble, ChevronRight, Loader2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { PlusCircle, Hotel, Loader2, MoreHorizontal, ChevronRight, Settings } from 'lucide-react';
 import { getHotels } from '@/lib/actions/hotel.actions';
 import type { Hotel as HotelType } from '@/lib/definitions';
 
 // Extend the HotelType to include the properties we expect from getHotels
 interface DisplayHotel extends HotelType {
+  id: string;
+  name: string;
+  domain: string;
   bookings: number;
+  status: 'active' | 'inactive';
 }
 
 
@@ -48,11 +55,13 @@ export default function AdminDashboardPage() {
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
-      ) : (
-        hotels.length === 0 ? (
-          <Card className="text-center p-8">
+      ) : hotels.length === 0 ? (
+          <Card className="text-center p-8 border-dashed">
             <CardHeader>
-              <CardTitle>Noch keine Hotels vorhanden</CardTitle>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary">
+                    <Hotel className="h-8 w-8" />
+                </div>
+              <CardTitle className="mt-4">Noch keine Hotels vorhanden</CardTitle>
               <CardDescription>Erstellen Sie Ihr erstes Hotel, um mit der Verwaltung zu beginnen.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -64,33 +73,58 @@ export default function AdminDashboardPage() {
                 </Button>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {hotels.map((hotel) => (
-              <Card key={hotel.id} className="transform transition-transform hover:scale-105 hover:shadow-xl flex flex-col">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-medium font-headline truncate" title={hotel.name}>{hotel.name}</CardTitle>
-                    <CardDescription>{hotel.city || 'N/A'}, {hotel.country || 'N/A'}</CardDescription>
-                  </div>
-                  <Hotel className="h-6 w-6 text-primary flex-shrink-0" />
-                </CardHeader>
-                <CardContent className="flex-grow flex flex-col justify-between">
-                   <div className="text-2xl font-bold pt-2 flex items-center gap-2">
-                      <BedDouble className="h-6 w-6 text-muted-foreground" />
-                      <span>{hotel.bookings} Buchungen</span>
-                    </div>
-                  <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
-                    <Link href={`/dashboard/${hotel.id}`}>
-                      Hotel verwalten
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )
+      ) : (
+        <div className="border rounded-lg">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Hotelname</TableHead>
+                    <TableHead>Domain</TableHead>
+                    <TableHead>Buchungen</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aktionen</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {hotels.map((hotel) => (
+                    <TableRow key={hotel.id}>
+                        <TableCell className="font-medium">{hotel.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{hotel.domain}</TableCell>
+                        <TableCell>{hotel.bookings}</TableCell>
+                        <TableCell>
+                            <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'active' ? 'bg-green-100 text-green-800' : ''}>
+                                {hotel.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Menü öffnen</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/${hotel.id}`}>
+                                        <ChevronRight className="mr-2 h-4 w-4" />
+                                        <span>Verwalten</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/${hotel.id}/settings`}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Einstellungen</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
       )}
     </div>
   );
