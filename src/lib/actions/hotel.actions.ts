@@ -4,8 +4,10 @@
 // Server-side Firebase Admin actions for hotel creation + seeding
 
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import type { createHotelSchema } from '@/lib/definitions';
+import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
+import type { createHotelSchema } from '@/lib/definitions';
+
 
 const CreateHotelServerSchema = z.object({
   hotelName: z.string().min(3),
@@ -36,7 +38,7 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
 
   const { db } = getFirebaseAdmin();
   const hotelRef = db.collection('hotels').doc(); 
-  const now = db.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   const hotelDoc = {
     name: parsed.hotelName,
@@ -149,140 +151,3 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
     };
   }
 }
-
-
-
-// Function to fetch all hotels for the agency
-export async function getHotels() {
-    console.log("[Action: getHotels] Fetching all hotels from Firestore.");
-    const { db } = getFirebaseAdmin();
-    try {
-        const hotelsSnapshot = await db.collection('hotels').orderBy('createdAt', 'desc').get();
-        if (hotelsSnapshot.empty) {
-            console.log("[Action: getHotels] No hotels found.");
-            return [];
-        }
-
-        const hotels = await Promise.all(hotelsSnapshot.docs.map(async (doc) => {
-            const hotelData = doc.data();
-            const bookingsSnapshot = await db.collection('bookings').where('hotelId', '==', doc.id).count().get();
-            const bookingsCount = bookingsSnapshot.data().count;
-            
-            return {
-                ...hotelData,
-                id: doc.id,
-                name: hotelData.name || hotelData.hotelName,
-                bookings: bookingsCount,
-                status: hotelData.status || 'active',
-            };
-        }));
-
-        console.log(`[Action: getHotels] Found ${hotels.length} hotels.`);
-        return JSON.parse(JSON.stringify(hotels));
-    } catch (error) {
-        console.error("[Action: getHotels] Error fetching hotels:", error);
-        return [];
-    }
-}
-
-
-// Get a single hotel's data by its ID
-export async function getHotelById(hotelId: string): Promise<Hotel | null> {
-    console.log(`[Action: getHotelById] Fetching hotel with ID: ${hotelId}`);
-    const { db } = getFirebaseAdmin();
-    try {
-        const hotelDoc = await db.collection('hotels').doc(hotelId).get();
-        if (!hotelDoc.exists) {
-            console.warn(`[Action: getHotelById] Hotel with ID ${hotelId} not found.`);
-            return null;
-        }
-        const hotelData = hotelDoc.data() as Hotel;
-        const name = hotelData.name || (hotelData as any).hotelName;
-        const address = hotelData.address || (hotelData as any).fullAddress;
-
-        console.log(`[Action: getHotelById] Successfully fetched hotel: ${name}`);
-        return JSON.parse(JSON.stringify({ ...hotelData, id: hotelDoc.id, name, address }));
-    } catch (error) {
-        console.error(`[Action: getHotelById] Error fetching hotel ${hotelId}:`, error);
-        return null;
-    }
-}
-
-// Helper function to convert Firestore Timestamps to JS Dates in nested objects
-function convertTimestampsToDates(obj: any): any {
-  const { Timestamp } = require('firebase-admin/firestore');
-  if (!obj) return obj;
-  if (obj instanceof Timestamp) {
-    return obj.toDate();
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(convertTimestampsToDates);
-  }
-  if (typeof obj === 'object' && obj !== null) {
-    const newObj: { [key: string]: any } = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        newObj[key] = convertTimestampsToDates(obj[key]);
-      }
-    }
-    return newObj;
-  }
-  return obj;
-}
-
-// Get dashboard data for a hotel
-export async function getHotelDashboardData(hotelId: string) {
-    console.log(`[Action: getHotelDashboardData] Fetching data for hotel ID: ${hotelId}`);
-    const { db } = getFirebaseAdmin();
-    const { format } = require('date-fns');
-
-    try {
-        const hotelDetails = await getHotelById(hotelId);
-        if (!hotelDetails) {
-            throw new Error("Hotel not found");
-        }
-
-        const bookingsRef = db.collection('bookings');
-        
-        const confirmedBookingsSnapshot = await bookingsRef.where('hotelId', '==', hotelId).where('status', '==', 'confirmed').get();
-        const pendingBookingsSnapshot = await bookingsRef.where('hotelId', '==', hotelId).where('status', '==', 'pending_guest').get();
-        const allBookingsSnapshot = await bookingsRef.where('hotelId', '==', hotelId).get();
-        
-        const confirmedBookings = confirmedBookingsSnapshot.docs;
-        const totalRevenue = confirmedBookings.reduce((sum, doc) => sum + parseFloat(doc.data().totalPrice || 0), 0);
-        
-        const recentActivitiesSnapshot = await bookingsRef.where('hotelId', '==', hotelId).orderBy('createdAt', 'desc').limit(5).get();
-        const recentActivities = recentActivitiesSnapshot.docs.map(doc => {
-            const data = convertTimestampsToDates(doc.data());
-            return {
-                id: doc.id,
-                description: `New booking from ${data.guestName}.`,
-                timestamp: data.createdAt ? format(data.createdAt, 'dd.MM.yyyy HH:mm') : 'N/A'
-            };
-        });
-
-        const dashboardData = {
-            hotelName: hotelDetails.name,
-            stats: {
-                totalRevenue: totalRevenue.toFixed(2),
-                totalBookings: allBookingsSnapshot.size,
-                confirmedBookings: confirmedBookings.length,
-                pendingActions: pendingBookingsSnapshot.size,
-            },
-            recentActivities,
-        };
-
-        console.log(`[Action: getHotelDashboardData] Successfully fetched data for ${hotelDetails.name}`);
-        return JSON.parse(JSON.stringify(dashboardData));
-
-    } catch (error) {
-        console.error(`[Action: getHotelDashboardData] Error fetching dashboard data for hotel ${hotelId}:`, error);
-        return {
-            hotelName: 'Hotel',
-            stats: { totalRevenue: "0.00", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
-            recentActivities: []
-        };
-    }
-}
-
-    
