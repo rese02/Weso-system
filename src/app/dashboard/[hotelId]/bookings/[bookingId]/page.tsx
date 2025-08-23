@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import type { Booking } from '@/lib/definitions';
 
 export default async function BookingDetailsPage({ params }: { params: { hotelId: string, bookingId: string } }) {
-  const bookingData = await getBookingDetails(params.bookingId, params.hotelId);
+  const bookingData = await getBookingDetails(params.bookingId);
   const booking: Booking | null = bookingData ? {
       ...bookingData,
       checkInDate: new Date(bookingData.checkInDate),

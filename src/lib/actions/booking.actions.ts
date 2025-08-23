@@ -37,7 +37,7 @@ export async function createDirectBooking(hotelId: string, values: z.infer<typeo
 
     try {
         const hotelRef = adminDb.collection('hotels').doc(hotelId);
-        const bookingRef = hotelRef.collection('bookings').doc();
+        const bookingRef = adminDb.collection('bookings').doc();
         const guestLinkRef = adminDb.collection('guestLinks').doc();
 
 
@@ -86,7 +86,7 @@ export async function getBookingsByHotel(hotelId: string): Promise<Booking[]> {
     const { db: adminDb } = getFirebaseAdmin();
 
     try {
-        const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
+        const bookingsRef = adminDb.collection('bookings').where('hotelId', '==', hotelId);
         const snapshot = await bookingsRef.orderBy('checkInDate', 'desc').get();
         
         if (snapshot.empty) {
@@ -105,14 +105,14 @@ export async function getBookingsByHotel(hotelId: string): Promise<Booking[]> {
 }
 
 // Function to get details for a single booking
-export async function getBookingDetails(bookingId: string, hotelId: string): Promise<Booking | null> {
-    console.log(`[Action: getBookingDetails] Fetching booking ${bookingId} for hotel ${hotelId}`);
+export async function getBookingDetails(bookingId: string): Promise<Booking | null> {
+    console.log(`[Action: getBookingDetails] Fetching booking ${bookingId}`);
     const { db: adminDb } = getFirebaseAdmin();
     
     try {
-        const bookingDoc = await adminDb.collection('hotels').doc(hotelId).collection('bookings').doc(bookingId).get();
+        const bookingDoc = await adminDb.collection('bookings').doc(bookingId).get();
         if (!bookingDoc.exists) {
-            console.warn(`[Action: getBookingDetails] Booking ${bookingId} not found in hotel ${hotelId}`);
+            console.warn(`[Action: getBookingDetails] Booking ${bookingId} not found`);
             return null;
         }
         const bookingData = convertTimestampsToDates(bookingDoc.data());
@@ -148,7 +148,7 @@ export async function submitGuestBooking(linkId: string, formData: z.infer<typeo
     const { hotelId, bookingId } = linkData as { hotelId: string; bookingId: string; };
 
     const hotelRef = adminDb.collection('hotels').doc(hotelId);
-    const bookingRef = hotelRef.collection('bookings').doc(bookingId);
+    const bookingRef = adminDb.collection('bookings').doc(bookingId);
     
     console.log(`[Action: submitGuestBooking] Verified Paths. Hotel: ${hotelRef.path}, Booking: ${bookingRef.path}`);
 
@@ -243,7 +243,7 @@ export async function getBookingDataForGuest(linkId: string): Promise<{ success:
         }
 
         const hotelDoc = await adminDb.collection('hotels').doc(linkData.hotelId).get();
-        const bookingDoc = await adminDb.collection('hotels').doc(linkData.hotelId).collection('bookings').doc(linkData.bookingId).get();
+        const bookingDoc = await adminDb.collection('bookings').doc(linkData.bookingId).get();
         
         if (!hotelDoc.exists || !bookingDoc.exists) {
             console.error(`[Action: getBookingDataForGuest] Mismatch: Hotel or Booking not found. Hotel exists: ${hotelDoc.exists}, Booking exists: ${bookingDoc.exists}`);

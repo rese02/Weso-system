@@ -38,11 +38,11 @@ export default function EditBookingPage() {
   });
 
   useEffect(() => {
-    if (!bookingId || !hotelId) return;
+    if (!bookingId) return;
 
     async function fetchBooking() {
       setIsLoading(true);
-      const bookingData = await getBookingDetails(bookingId, hotelId);
+      const bookingData = await getBookingDetails(bookingId);
       if (bookingData) {
         const dataWithDates = {
             ...bookingData,
@@ -55,7 +55,7 @@ export default function EditBookingPage() {
       setIsLoading(false);
     }
     fetchBooking();
-  }, [bookingId, hotelId, form]);
+  }, [bookingId, form]);
 
   const onSubmit = (data: EditBookingFormValues) => {
     console.log('Submitting updated booking data:', data);
