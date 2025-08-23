@@ -107,9 +107,8 @@ export default async function HotelDashboardPage({ params }: { params: { hotelId
                     <ul className="space-y-3 text-sm">
                         {data.recentActivities.map(activity => (
                             <li key={activity.id} className="flex items-center gap-3">
-                                <div className="text-muted-foreground font-mono text-xs">{activity.id}</div>
+                                <div className="text-muted-foreground font-mono text-xs">{activity.timestamp}</div>
                                 <div className="flex-1">{activity.description}</div>
-                                <div className="text-muted-foreground text-xs">{activity.timestamp}</div>
                             </li>
                         ))}
                     </ul>

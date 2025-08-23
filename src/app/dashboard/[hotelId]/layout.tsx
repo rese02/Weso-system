@@ -25,7 +25,7 @@ export default async function HotelierLayout({
           <div className="flex h-full flex-col">
             <div className="flex h-16 items-center border-b px-4">
               <Link href={`/dashboard/${params.hotelId}`} className="flex items-center gap-2 font-headline text-lg font-semibold text-primary">
-                <span>{hotel.name}</span>
+                <span>{hotel?.name ?? "Hotel"}</span>
               </Link>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -61,7 +61,7 @@ export default async function HotelierLayout({
         <div className="flex flex-1 flex-col">
             <DashboardHeader 
               title="Hotel Dashboard"
-              user={{ name: hotel.name, email: "manager@hotel-sonnenalp.com" }}
+              user={{ name: hotel?.name ?? "Hotel User", email: hotel?.contactEmail ?? 'N/A' }}
               userRole="hotelier"
             />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">

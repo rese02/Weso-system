@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { type Timestamp } from 'firebase-admin/firestore';
 
 // Base types
 export type Hotel = {
   id: string;
   name: string;
   address: string;
-  city: string;
-  country: string;
+  contactEmail: string;
+  contactPhone: string;
   domain: string;
   bookings?: number; // Optional for display purposes
   status?: 'active' | 'inactive'; // Optional for display purposes
@@ -25,13 +26,13 @@ export type Booking = {
   hotelId: string;
   guestId?: string;
   guestName: string;
-  checkInDate: Date;
-  checkOutDate: Date;
+  checkInDate: Date | Timestamp;
+  checkOutDate: Date | Timestamp;
   roomType: string;
   status: 'pending_guest' | 'confirmed' | 'cancelled' | 'archived';
   guestLinkId: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: Date | Timestamp;
+  updatedAt?: Date | Timestamp;
   guestDetails?: Guest;
 };
 

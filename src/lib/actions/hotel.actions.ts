@@ -2,9 +2,11 @@
 
 import 'dotenv/config';
 import type { z } from 'zod';
-import type { createHotelSchema } from '@/lib/definitions';
+import type { createHotelSchema, Hotel } from '@/lib/definitions';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 /**
  * Creates a new hotel, a corresponding Firebase Auth user for the hotelier,
@@ -130,32 +132,24 @@ export async function getHotels() {
 }
 
 // Get a single hotel's data by its ID
-export async function getHotelById(hotelId: string) {
+export async function getHotelById(hotelId: string): Promise<Hotel | null> {
     console.log(`Fetching hotel ${hotelId}...`);
     const { db: adminDb } = getFirebaseAdmin();
     if (!adminDb) {
       console.error("Firestore not initialized.");
-      return { id: hotelId, name: `Error: Hotel ${hotelId} not found`, address: '', city: '', country: '', domain:'' };
+      return null;
     }
     try {
       const hotelDoc = await adminDb.collection('hotels').doc(hotelId).get();
       if (!hotelDoc.exists) {
         console.warn(`Hotel with id ${hotelId} not found.`);
-        return { id: hotelId, name: `Hotel ${hotelId} Not Found`, address: '', city: '', country: '', domain:'' };
+        return null;
       }
-      const data = hotelDoc.data()!;
-      const addressParts = (data.address || '').split(',');
-      return {
-          id: hotelDoc.id,
-          name: data.name || `Hotel ${hotelId}`,
-          address: data.address || 'N/A',
-          city: addressParts[1]?.trim() || 'N/A',
-          country: addressParts[2]?.trim() || 'N/A',
-          domain: data.domain
-      };
+      return hotelDoc.data() as Hotel;
+
     } catch (error) {
        console.error(`Error fetching hotel by ID ${hotelId}: `, error);
-       return { id: hotelId, name: `Error loading hotel`, address: '', city: '', country: '', domain:'' };
+       return null;
     }
 }
 
@@ -165,12 +159,15 @@ export async function getHotelDashboardData(hotelId: string) {
     console.log(`Fetching dashboard data for hotel ${hotelId}...`);
     const hotelDetails = await getHotelById(hotelId);
     const { db: adminDb } = getFirebaseAdmin();
-     if (!adminDb) {
-        return {
-            hotelName: hotelDetails.name,
-            stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
-            recentActivities: []
-        }
+    
+    const defaultData = {
+        hotelName: hotelDetails?.name ?? 'Hotel',
+        stats: { totalRevenue: "0", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
+        recentActivities: []
+    }
+
+     if (!adminDb || !hotelDetails) {
+        return defaultData;
     }
     
     const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
@@ -195,10 +192,11 @@ export async function getHotelDashboardData(hotelId: string) {
     const recentActivities = recentActivitiesSnapshot.docs.map(doc => {
         const data = doc.data();
         const guestName = data.guestDetails ? `${data.guestDetails.firstName} ${data.guestDetails.lastName}` : data.guestName;
+        const timestamp = data.createdAt.toDate();
         return {
-            id: doc.id.substring(0,6).toUpperCase(),
-            description: `Booking for ${guestName} was updated. Status: ${data.status}`,
-            timestamp: `some time ago` // In real app use formatDistanceToNow
+            id: doc.id,
+            description: `Buchung für ${guestName} wurde aktualisiert. Status: ${data.status.replace('_', ' ')}`,
+            timestamp: formatDistanceToNow(timestamp, { addSuffix: true, locale: de })
         }
     });
 
