@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -159,8 +160,8 @@ export function BookingForm({ linkId, initialData }: { linkId: string; initialDa
                             <div><p><strong>Full Name:</strong> {formData.firstName} {formData.lastName}</p></div>
                             <div><p><strong>Email:</strong> {formData.email}</p></div>
                             <div><p><strong>Phone:</strong> {formData.phone}</p></div>
-                            <div><p><strong>Check-in:</strong> {format(initialData.booking.checkInDate, 'PPP')}</p></div>
-                            <div><p><strong>Check-out:</strong> {format(initialData.booking.checkOutDate, 'PPP')}</p></div>
+                            <div><p><strong>Check-in:</strong> {format(new Date(initialData.booking.checkInDate), 'PPP')}</p></div>
+                            <div><p><strong>Check-out:</strong> {format(new Date(initialData.booking.checkOutDate), 'PPP')}</p></div>
                             <div><p><strong>Room:</strong> {initialData.booking.roomType}</p></div>
                             <div><p><strong>Document:</strong> {formData.documentUrl ? 'Uploaded' : 'Not Uploaded'}</p></div>
                             <div><p><strong>Payment Proof:</strong> {formData.paymentProofUrl ? 'Uploaded' : 'Not Uploaded'}</p></div>

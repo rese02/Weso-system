@@ -1,8 +1,6 @@
 
 'use server';
 
-// Server-side Firebase Admin actions for hotel creation + seeding
-
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';

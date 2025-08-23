@@ -23,7 +23,7 @@ export function AgencyLoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(agencyLoginSchema),
     defaultValues: {
-      email: 'admin@weso.com',
+      email: '',
       password: '',
     },
   });
