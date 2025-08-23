@@ -8,55 +8,67 @@ import type { createHotelSchema } from '@/lib/definitions';
 import type { Hotel } from '@/lib/definitions';
 
 
+// This schema is used for validating the data from the form on the server.
+// It is slightly different from the client-side schema as it expects the ownerId.
 const CreateHotelServerSchema = z.object({
-  hotelName: z.string().min(3),
+  hotelName: z.string().min(3, "Hotel name must be at least 3 characters."),
   domain: z.string().optional(),
-  hotelierEmail: z.string().email(),
-  hotelierPassword: z.string().min(8),
-  contactEmail: z.string().email(),
+  logo: z.any().optional(),
+  hotelierEmail: z.string().email("Invalid email address."),
+  hotelierPassword: z.string().min(8, "Password must be at least 8 characters."),
+  contactEmail: z.string().email("Invalid contact email address."),
   contactPhone: z.string(),
-  fullAddress: z.string().min(10),
+  fullAddress: z.string().min(10, "Full address is required."),
   meals: z.array(z.string()),
-  roomCategories: z.array(z.object({ name: z.string().min(2) })).min(1),
+  roomCategories: z.array(z.object({ name: z.string().min(2, {message: 'Category name is required'}) })).min(1, "At least one room category is required."),
   bankAccountHolder: z.string(),
   iban: z.string(),
   bic: z.string(),
   bankName: z.string(),
-  ownerId: z.string().min(1), // Added ownerId
+  ownerId: z.string().min(1, "Owner ID is required."),
 });
 
-
 /**
- * Erzeugt ein Hotel-Dokument, legt eine default wizardConfig an und seedet einen Default Room.
- * - Legt ein Dokument in /hotels/{hotelId}
- * - Legt /hotels/{hotelId}/wizardConfig/default an
- * - Legt /hotels/{hotelId}/rooms/{roomId} mit einem Default-Room an
+ * Creates a hotel document, sets up a default wizardConfig, and seeds a default room.
+ * - Creates a document in /hotels/{hotelId}
+ * - Creates /hotels/{hotelId}/wizardConfig/default
+ * - Creates /hotels/{hotelId}/rooms/{roomId} with a default room
  */
 export async function createHotel(values: z.infer<typeof createHotelSchema> & { ownerId: string }) {
   console.log('admin.apps.length', getFirebaseAdmin() ? 'SDK seems loaded' : 'SDK not loaded');
-  const parsed = CreateHotelServerSchema.parse(values);
+  const parsed = CreateHotelServerSchema.safeParse(values);
+
+  if (!parsed.success) {
+    const errorDetails = parsed.error.flatten().fieldErrors;
+    console.error("Validation failed:", errorDetails);
+    return {
+        success: false,
+        message: "Validation failed. Please check the form fields.",
+        errors: errorDetails,
+    };
+  }
 
   const { db } = getFirebaseAdmin();
   const hotelRef = db.collection('hotels').doc(); 
   const now = FieldValue.serverTimestamp();
 
   const hotelDoc = {
-    name: parsed.hotelName,
-    domain: parsed.domain,
-    hotelierEmail: parsed.hotelierEmail,
-    hotelierPassword: parsed.hotelierPassword, 
-    contactEmail: parsed.contactEmail,
-    contactPhone: parsed.contactPhone,
-    address: parsed.fullAddress,
-    meals: parsed.meals,
-    roomCategories: parsed.roomCategories,
+    name: parsed.data.hotelName,
+    domain: parsed.data.domain,
+    hotelierEmail: parsed.data.hotelierEmail,
+    hotelierPassword: parsed.data.hotelierPassword, 
+    contactEmail: parsed.data.contactEmail,
+    contactPhone: parsed.data.contactPhone,
+    address: parsed.data.fullAddress,
+    meals: parsed.data.meals,
+    roomCategories: parsed.data.roomCategories,
     bankDetails: {
-        accountHolder: parsed.bankAccountHolder,
-        iban: parsed.iban,
-        bic: parsed.bic,
-        bankName: parsed.bankName,
+        accountHolder: parsed.data.bankAccountHolder,
+        iban: parsed.data.iban,
+        bic: parsed.data.bic,
+        bankName: parsed.data.bankName,
     },
-    ownerId: parsed.ownerId,
+    ownerId: parsed.data.ownerId,
     settings: {
         allowGuestUploads: true,
         maxUploadMb: 10,
@@ -66,47 +78,47 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
     updatedAt: now,
   };
     
-  // default wizard steps (leicht anpassbar)
+  // default wizard steps (easily adjustable)
   const defaultWizard = {
     createdAt: now,
     updatedAt: now,
     steps: [
       {
         id: 'guest-info',
-        title: 'Gäste Informationen',
-        description: 'Name, Kontakt & Adresse',
+        title: 'Guest Information',
+        description: 'Name, Contact & Address',
         inputs: [
-          { key: 'firstName', label: 'Vorname', type: 'text', required: true },
-          { key: 'lastName', label: 'Nachname', type: 'text', required: true },
-          { key: 'email', label: 'E‑Mail', type: 'email', required: true },
-          { key: 'phone', label: 'Telefon', type: 'tel', required: false },
+          { key: 'firstName', label: 'First Name', type: 'text', required: true },
+          { key: 'lastName', label: 'Last Name', type: 'text', required: true },
+          { key: 'email', label: 'Email', type: 'email', required: true },
+          { key: 'phone', label: 'Phone', type: 'tel', required: false },
         ],
       },
       {
         id: 'documents',
-        title: 'Dokumente',
-        description: 'Lade Ausweis/Pass hoch (falls erforderlich)',
+        title: 'Documents',
+        description: 'Upload ID/Passport (if required)',
         inputs: [
-          { key: 'id_document', label: 'Ausweis / Reisepass', type: 'file', required: false },
+          { key: 'id_document', label: 'ID / Passport', type: 'file', required: false },
         ],
       },
       {
         id: 'confirm',
-        title: 'Bestätigung',
-        description: 'Einwilligungen & Check',
+        title: 'Confirmation',
+        description: 'Consents & Check',
         inputs: [
-          { key: 'consent_gdpr', label: 'Einwilligung zur Datenverarbeitung', type: 'checkbox', required: true },
+          { key: 'consent_gdpr', label: 'Consent to data processing', type: 'checkbox', required: true },
         ],
       },
     ],
   } as const;
 
   // Default room seed
-  const defaultRooms = parsed.roomCategories.map(category => ({
+  const defaultRooms = parsed.data.roomCategories.map(category => ({
     title: category.name,
-    description: `Standardmäßig angelegtes Zimmer der Kategorie ${category.name}`,
+    description: `Standard room of category ${category.name}`,
     capacity: 2, // Default capacity
-    price: 0, // default, Admin sollte anpassen
+    price: 0, // default, admin should adjust
     createdAt: now,
     updatedAt: now,
   }));
@@ -128,8 +140,8 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
       
       const bookingTemplateRef = hotelRef.collection('bookingTemplates').doc('default');
       tx.set(bookingTemplateRef, {
-        title: 'Standard Buchungsvorlage',
-        description: 'Vorlage für neue Buchungen',
+        title: 'Standard Booking Template',
+        description: 'Template for new bookings',
         createdAt: now,
         updatedAt: now,
         template: {
@@ -141,18 +153,20 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
     return {
       success: true,
       hotelId: hotelRef.id,
-      message: 'Hotel angelegt und mit Default Wizard + Rooms geseedet.',
+      message: 'Hotel created and seeded with Default Wizard + Rooms.',
     };
   } catch (err) {
     console.error('createHotel transaction error', err);
+    // Provide a more informative error message
+    const errorMessage = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      message: (err as Error).message || String(err),
+      message: `An unexpected error occurred on the server: ${errorMessage}`,
     };
   }
 }
 
-export async function getHotels() {
+export async function getHotels(): Promise<(Hotel & {id: string, name: string, domain: string, bookings: number, status: 'active' | 'inactive' })[]> {
     console.log('[Action: getHotels] Fetching all hotels');
     const { db } = getFirebaseAdmin();
     try {

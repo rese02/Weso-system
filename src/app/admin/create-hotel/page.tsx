@@ -15,13 +15,13 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Hotel, Building, Upload, Mail, KeySquare, Phone, MapPin, Banknote, Trash2, PlusCircle, Wand2, Clipboard, Check } from 'lucide-react';
+import { Hotel, Building, Upload, Mail, KeySquare, Phone, MapPin, Banknote, Trash2, PlusCircle, Wand2, Clipboard, Check, Loader2 } from 'lucide-react';
 
 const mealOptions = [
-  { id: 'breakfast', label: 'Frühstück' },
-  { id: 'half_board', label: 'Halbpension' },
-  { id: 'full_board', label: 'Vollpension' },
-  { id: 'none', label: 'Ohne Verpflegung' },
+  { id: 'breakfast', label: 'Breakfast' },
+  { id: 'half_board', label: 'Half Board' },
+  { id: 'full_board', label: 'Full Board' },
+  { id: 'none', label: 'No Meal Plan' },
 ] as const;
 
 type CreateHotelFormValues = z.infer<typeof createHotelSchema>;
@@ -42,7 +42,7 @@ export default function CreateHotelPage() {
       contactEmail: '',
       contactPhone: '',
       fullAddress: '',
-      roomCategories: [{ name: 'Einzelzimmer' }, { name: 'Doppelzimmer' }, { name: 'Suite' }],
+      roomCategories: [{ name: 'Single Room' }, { name: 'Double Room' }, { name: 'Suite' }],
       meals: [],
       bankAccountHolder: '',
       iban: '',
@@ -63,15 +63,15 @@ export default function CreateHotelPage() {
     const result = await createHotel(valuesWithOwner);
     if (result.success) {
       toast({
-        title: "Hotel erfolgreich erstellt!",
-        description: `${values.hotelName} wurde dem System hinzugefügt.`,
+        title: "Hotel Created Successfully!",
+        description: `${values.hotelName} has been added to the system.`,
       });
       form.reset();
     } else {
       toast({
         variant: "destructive",
-        title: "Fehler",
-        description: result.message || "Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+        title: "Error",
+        description: result.message || "Could not create the hotel. Please try again.",
       });
     }
   };
@@ -110,8 +110,8 @@ export default function CreateHotelPage() {
             <Hotel className="h-6 w-6" />
           </div>
           <div>
-              <CardTitle className="font-headline text-2xl">Neues Hotel Anlegen</CardTitle>
-              <CardDescription>Richten Sie ein neues Hotel mit allen erforderlichen Konfigurationen in HotelHub Central ein.</CardDescription>
+              <CardTitle className="font-headline text-2xl">Create New Hotel</CardTitle>
+              <CardDescription>Set up a new hotel with all necessary configurations in HotelHub Central.</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -121,16 +121,16 @@ export default function CreateHotelPage() {
             
             {/* Section A: Basic Data / Access */}
             <div className="space-y-4">
-              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Grunddaten / Zugang</h3>
+              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Basic Data / Access</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                 <FormField control={form.control} name="hotelName" render={({ field }) => (
-                  <FormItem><FormLabel>Hotelname</FormLabel><FormControl><Input placeholder="Ihr Hotelname" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Hotel Name</FormLabel><FormControl><Input placeholder="Your Hotel Name" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="domain" render={({ field }) => (
-                  <FormItem><FormLabel>Domain oder Subdomain</FormLabel><FormControl><Input placeholder="ihrhotel.de" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Domain or Subdomain</FormLabel><FormControl><Input placeholder="yourhotel.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="logo" render={({ field }) => (
-                    <FormItem><FormLabel>Hotel-Logo (PNG)</FormLabel>
+                    <FormItem><FormLabel>Hotel Logo (PNG)</FormLabel>
                       <FormControl>
                           <div className="relative">
                               <Input type="file" accept=".png" className="pr-12" {...form.register("logo")} />
@@ -140,10 +140,10 @@ export default function CreateHotelPage() {
                   </FormItem>
                 )} />
                   <FormField control={form.control} name="hotelierEmail" render={({ field }) => (
-                  <FormItem><FormLabel>E-Mail-Adresse des Hoteliers</FormLabel>
+                  <FormItem><FormLabel>Hotelier's Email Address</FormLabel>
                       <FormControl>
                           <div className="relative">
-                              <Input type="email" placeholder="email@ihres-hotels.de" {...field} />
+                              <Input type="email" placeholder="email@your-hotel.com" {...field} />
                               <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={handleCopyEmail}>
                                   {isEmailCopied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4"/>}
                               </Button>
@@ -152,10 +152,10 @@ export default function CreateHotelPage() {
                   </FormItem>
                 )} />
                   <FormField control={form.control} name="hotelierPassword" render={({ field }) => (
-                  <FormItem><FormLabel>Passwort des Hoteliers</FormLabel>
+                  <FormItem><FormLabel>Hotelier's Password</FormLabel>
                       <FormControl>
                           <div className="relative">
-                              <Input type="password" placeholder="Generiertes Passwort" {...field} />
+                              <Input type="password" placeholder="Generated password" {...field} />
                                 <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
                                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleCopyPassword}>
                                       {isPasswordCopied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4"/>}
@@ -173,17 +173,17 @@ export default function CreateHotelPage() {
 
             {/* Section B: Public Contact Data */}
             <div className="space-y-4">
-              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Mail className="h-5 w-5 text-primary"/>Öffentliche Kontaktdaten</h3>
+              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Mail className="h-5 w-5 text-primary"/>Public Contact Data</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                 <FormField control={form.control} name="contactEmail" render={({ field }) => (
-                  <FormItem><FormLabel>Kontakt E-Mail</FormLabel><FormControl><Input type="email" placeholder="kontakt@ihrhotel.de" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Contact Email</FormLabel><FormControl><Input type="email" placeholder="contact@yourhotel.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="contactPhone" render={({ field }) => (
-                  <FormItem><FormLabel>Kontakt Telefonnummer</FormLabel><FormControl><Input placeholder="Ihre Telefonnummer" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Contact Phone Number</FormLabel><FormControl><Input placeholder="Your phone number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="md:col-span-2">
                   <FormField control={form.control} name="fullAddress" render={({ field }) => (
-                      <FormItem><FormLabel>Vollständige Adresse</FormLabel><FormControl><Input placeholder="Ihre vollständige Adresse" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Full Address</FormLabel><FormControl><Input placeholder="Your full address" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
               </div>
@@ -191,10 +191,10 @@ export default function CreateHotelPage() {
 
             {/* Section C: Booking Configuration */}
             <div className="space-y-4">
-              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><KeySquare className="h-5 w-5 text-primary"/>Buchungskonfiguration</h3>
+              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><KeySquare className="h-5 w-5 text-primary"/>Booking Configuration</h3>
               <div className="p-4 border rounded-lg space-y-6">
                   <div>
-                      <FormLabel>Verpflegungsarten</FormLabel>
+                      <FormLabel>Meal Plans</FormLabel>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                       <FormField
                           control={form.control}
@@ -224,7 +224,7 @@ export default function CreateHotelPage() {
                   </div>
                   <Separator/>
                   <div>
-                      <FormLabel>Zimmerkategorien</FormLabel>
+                      <FormLabel>Room Categories</FormLabel>
                       <div className="space-y-2 mt-2">
                           {fields.map((field, index) => (
                               <div key={field.id} className="flex items-center gap-2">
@@ -233,7 +233,7 @@ export default function CreateHotelPage() {
                                   name={`roomCategories.${index}.name`}
                                   render={({ field }) => (
                                   <FormItem className="flex-grow">
-                                      <FormControl><Input {...field} placeholder="z.B. Doppelzimmer" /></FormControl>
+                                      <FormControl><Input {...field} placeholder="e.g. Double Room" /></FormControl>
                                       <FormMessage />
                                   </FormItem>
                                   )}
@@ -245,7 +245,7 @@ export default function CreateHotelPage() {
                           ))}
                       </div>
                       <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ name: '' })}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Kategorie hinzufügen
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Category
                       </Button>
                   </div>
               </div>
@@ -253,19 +253,19 @@ export default function CreateHotelPage() {
             
             {/* Section D: Bank Details */}
             <div className="space-y-4">
-              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Banknote className="h-5 w-5 text-primary"/>Bankverbindung für Überweisungen</h3>
+              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Banknote className="h-5 w-5 text-primary"/>Bank Details for Transfers</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                   <FormField control={form.control} name="bankAccountHolder" render={({ field }) => (
-                      <FormItem><FormLabel>Kontoinhaber</FormLabel><FormControl><Input placeholder="Ihr Name oder Firmenname" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Account Holder</FormLabel><FormControl><Input placeholder="Your name or company name" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="bankName" render={({ field }) => (
-                      <FormItem><FormLabel>Bank (Name der Bank)</FormLabel><FormControl><Input placeholder="Name Ihrer Bank" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Bank Name</FormLabel><FormControl><Input placeholder="Name of your bank" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="iban" render={({ field }) => (
-                      <FormItem><FormLabel>IBAN</FormLabel><FormControl><Input placeholder="Ihre IBAN" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>IBAN</FormLabel><FormControl><Input placeholder="Your IBAN" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="bic" render={({ field }) => (
-                      <FormItem><FormLabel>BIC / SWIFT</FormLabel><FormControl><Input placeholder="Ihre BIC/SWIFT" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>BIC / SWIFT</FormLabel><FormControl><Input placeholder="Your BIC/SWIFT" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
               </div>
             </div>
@@ -273,7 +273,8 @@ export default function CreateHotelPage() {
             <Separator />
 
             <Button type="submit" disabled={form.formState.isSubmitting} className="w-full text-lg py-6">
-              {form.formState.isSubmitting ? 'Wird erstellt...' : 'Hotel anlegen und System einrichten'}
+              {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+              {form.formState.isSubmitting ? 'Creating Hotel...' : 'Create Hotel and Setup System'}
             </Button>
           </form>
         </Form>
