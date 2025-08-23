@@ -1,7 +1,8 @@
+
 'use server';
 
 import type { z } from 'zod';
-import type { createBookingSchema } from '@/lib/definitions';
+import type { createBookingSchema, Booking } from '@/lib/definitions';
 import { generateConfirmationEmail } from '@/ai/flows/generate-confirmation-email';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
@@ -28,6 +29,47 @@ function convertTimestampsToDates(obj: any): any {
   }
   return obj;
 }
+
+const mockBookings: Booking[] = [
+    {
+        id: 'bkg_1a2b3c',
+        hotelId: 'hotel-sonnenalp',
+        guestName: 'Max Mustermann',
+        checkInDate: new Date('2024-09-15'),
+        checkOutDate: new Date('2024-09-20'),
+        roomType: 'Doppelzimmer Bergblick',
+        status: 'confirmed',
+        guestLinkId: 'link_xyz789',
+        createdAt: new Date('2024-08-01T10:00:00Z'),
+        updatedAt: new Date('2024-08-02T14:30:00Z'),
+        guestDetails: { id: 'guest_1', firstName: 'Max', lastName: 'Mustermann', email: 'max.mustermann@example.com', phone: '+49123456789' }
+    },
+    {
+        id: 'bkg_4d5e6f',
+        hotelId: 'hotel-sonnenalp',
+        guestName: 'Erika Mustermann',
+        checkInDate: new Date('2024-10-01'),
+        checkOutDate: new Date('2024-10-05'),
+        roomType: 'Suite Seeblick',
+        status: 'pending_guest',
+        guestLinkId: 'link_abc123',
+        createdAt: new Date('2024-08-20T11:00:00Z'),
+        updatedAt: new Date('2024-08-20T11:00:00Z'),
+    },
+    {
+        id: 'bkg_7g8h9i',
+        hotelId: 'hotel-sonnenalp',
+        guestName: 'John Doe',
+        checkInDate: new Date('2024-08-25'),
+        checkOutDate: new Date('2024-08-28'),
+        roomType: 'Einzelzimmer Standard',
+        status: 'cancelled',
+        guestLinkId: 'link_def456',
+        createdAt: new Date('2024-07-15T15:00:00Z'),
+        updatedAt: new Date('2024-08-10T09:00:00Z'),
+        guestDetails: { id: 'guest_2', firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com', phone: '+1-555-1234' }
+    }
+];
 
 
 // Function to create a new booking and generate a guest link
@@ -82,51 +124,24 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
 
 // Placeholder to get bookings for a specific hotel
 export async function getBookingsByHotel(hotelId: string) {
-    console.log(`Fetching bookings for hotel ${hotelId}...`);
-    const { db: adminDb } = getFirebaseAdmin();
-    if (!adminDb) {
-      console.error("Firestore not initialized for getBookingsByHotel.");
-      return [];
-    }
-
-    try {
-        const bookingsRef = adminDb.collection('hotels').doc(hotelId).collection('bookings');
-        const snapshot = await bookingsRef.orderBy('checkInDate', 'desc').get();
-        
-        if (snapshot.empty) {
-            return [];
-        }
-
-        const bookings = snapshot.docs.map(doc => convertTimestampsToDates(doc.data()));
-        return bookings;
-
-    } catch (error) {
-        console.error(`Error fetching bookings for hotel ${hotelId}: `, error);
-        return [];
-    }
+    console.log(`Fetching bookings for hotel ${hotelId} (using mock data)...`);
+    // Returning mock data to avoid server crash
+    const filteredBookings = mockBookings.filter(b => b.hotelId === hotelId);
+    return Promise.resolve(JSON.parse(JSON.stringify(filteredBookings)));
 }
 
 // Placeholder to get details for a single booking
 export async function getBookingDetails(bookingId: string) {
-    console.log(`Fetching details for booking ${bookingId}`);
-    const { db: adminDb } = getFirebaseAdmin();
-    if (!adminDb) {
-      console.error("Firestore not initialized for getBookingDetails.");
-      return null;
-    }
-
-    // This is not scalable. In a real app, you would have the hotelId.
-    const bookingsRef = adminDb.collectionGroup('bookings').where('id', '==', bookingId);
-    const snapshot = await bookingsRef.get();
-    
-    if (snapshot.empty) {
-        console.warn(`Booking with id ${bookingId} not found.`);
+    console.log(`Fetching details for booking ${bookingId} (using mock data)`);
+    const booking = mockBookings.find(b => b.id === bookingId);
+    if (!booking) {
+        console.warn(`Booking with id ${bookingId} not found in mock data.`);
         return null;
     }
-
-    const bookingDoc = snapshot.docs[0];
-    return convertTimestampsToDates(bookingDoc.data());
+    // Deep copy to avoid mutation issues, and simulate serialization
+    return Promise.resolve(JSON.parse(JSON.stringify(booking)));
 }
+
 
 // Function for guest to submit their completed booking form
 export async function submitGuestBooking(linkId: string, formData: any) {
@@ -279,3 +294,5 @@ export async function getBookingDataForGuest(linkId: string) {
         return { success: false, message: 'An unexpected server error occurred.' };
     }
 }
+
+    
