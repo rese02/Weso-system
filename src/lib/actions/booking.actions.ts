@@ -3,7 +3,7 @@
 import type { z } from 'zod';
 import type { createBookingSchema } from '@/lib/definitions';
 import { generateConfirmationEmail } from '@/ai/flows/generate-confirmation-email';
-import { adminDb } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { sendEmail } from './email.actions';
 import { format } from 'date-fns';
@@ -33,6 +33,7 @@ function convertTimestampsToDates(obj: any): any {
 // Function to create a new booking and generate a guest link
 export async function createBookingLink(hotelId: string, values: z.infer<typeof createBookingSchema>) {
   console.log(`[Action: createBookingLink] START for hotel ${hotelId}`, values);
+  const { db: adminDb } = getFirebaseAdmin();
   if (!adminDb) {
     console.error("[Action: createBookingLink] Firestore not initialized.");
     return { success: false, message: 'Server configuration error.' };
@@ -82,6 +83,7 @@ export async function createBookingLink(hotelId: string, values: z.infer<typeof 
 // Placeholder to get bookings for a specific hotel
 export async function getBookingsByHotel(hotelId: string) {
     console.log(`Fetching bookings for hotel ${hotelId}...`);
+    const { db: adminDb } = getFirebaseAdmin();
     if (!adminDb) {
       console.error("Firestore not initialized for getBookingsByHotel.");
       return [];
@@ -107,6 +109,7 @@ export async function getBookingsByHotel(hotelId: string) {
 // Placeholder to get details for a single booking
 export async function getBookingDetails(bookingId: string) {
     console.log(`Fetching details for booking ${bookingId}`);
+    const { db: adminDb } = getFirebaseAdmin();
     if (!adminDb) {
       console.error("Firestore not initialized for getBookingDetails.");
       return null;
@@ -128,6 +131,7 @@ export async function getBookingDetails(bookingId: string) {
 // Function for guest to submit their completed booking form
 export async function submitGuestBooking(linkId: string, formData: any) {
   console.log(`[Action: submitGuestBooking] START for linkId: ${linkId}`);
+  const { db: adminDb } = getFirebaseAdmin();
   if (!adminDb) {
     console.error("[Action: submitGuestBooking] Firestore not initialized.");
     return { success: false, message: 'Server configuration error.' };
@@ -228,6 +232,7 @@ export async function submitGuestBooking(linkId: string, formData: any) {
 // Function to get initial booking data for the guest form
 export async function getBookingDataForGuest(linkId: string) {
     console.log(`[Action: getBookingDataForGuest] START for linkId: ${linkId}`);
+    const { db: adminDb } = getFirebaseAdmin();
     if (!adminDb) {
         return { success: false, message: 'Server configuration error.' };
     }

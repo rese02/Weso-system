@@ -3,7 +3,7 @@
 import 'dotenv/config';
 import type { z } from 'zod';
 import type { createHotelSchema } from '@/lib/definitions';
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 /**
@@ -12,6 +12,8 @@ import { FieldValue } from 'firebase-admin/firestore';
  */
 export async function createHotel(values: z.infer<typeof createHotelSchema>) {
   console.log('Creating hotel with values:', values.hotelName);
+
+  const { db: adminDb, auth: adminAuth } = getFirebaseAdmin();
 
   if (!adminDb || !adminAuth) {
     console.error("Firebase Admin SDK not initialized.");
@@ -93,6 +95,7 @@ export async function createHotel(values: z.infer<typeof createHotelSchema>) {
 // Function to fetch all hotels for the agency
 export async function getHotels() {
   console.log('Fetching all hotels...');
+  const { db: adminDb } = getFirebaseAdmin();
    if (!adminDb) {
     console.error("Firestore not initialized for getHotels.");
     return [];
@@ -129,6 +132,7 @@ export async function getHotels() {
 // Get a single hotel's data by its ID
 export async function getHotelById(hotelId: string) {
     console.log(`Fetching hotel ${hotelId}...`);
+    const { db: adminDb } = getFirebaseAdmin();
     if (!adminDb) {
       console.error("Firestore not initialized.");
       return { id: hotelId, name: `Error: Hotel ${hotelId} not found`, address: '', city: '', country: '', domain:'' };
@@ -160,6 +164,7 @@ export async function getHotelById(hotelId: string) {
 export async function getHotelDashboardData(hotelId: string) {
     console.log(`Fetching dashboard data for hotel ${hotelId}...`);
     const hotelDetails = await getHotelById(hotelId);
+    const { db: adminDb } = getFirebaseAdmin();
      if (!adminDb) {
         return {
             hotelName: hotelDetails.name,
