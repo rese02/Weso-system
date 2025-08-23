@@ -7,7 +7,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import type { createHotelSchema } from '@/lib/definitions';
-
+import type { Hotel } from '@/lib/definitions';
 
 const CreateHotelServerSchema = z.object({
   hotelName: z.string().min(3),
@@ -150,4 +150,99 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
       message: (err as Error).message || String(err),
     };
   }
+}
+
+export async function getHotels() {
+    console.log('[Action: getHotels] Fetching all hotels');
+    const { db } = getFirebaseAdmin();
+    try {
+        const snapshot = await db.collection('hotels').orderBy('createdAt', 'desc').get();
+        if (snapshot.empty) {
+            console.log('[Action: getHotels] No hotels found.');
+            return [];
+        }
+        const hotels = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as (Hotel & {id: string, name: string, domain: string})[];
+        
+        // Augment with dummy data until booking counts are real
+        return hotels.map(hotel => ({
+            ...hotel,
+            bookings: Math.floor(Math.random() * 50),
+            status: Math.random() > 0.3 ? 'active' : 'inactive',
+        }));
+
+    } catch (error) {
+        console.error("[Action: getHotels] Error fetching hotels:", error);
+        return [];
+    }
+}
+
+export async function getHotelById(hotelId: string): Promise<Hotel | null> {
+    console.log(`[Action: getHotelById] Fetching hotel ${hotelId}`);
+    const { db } = getFirebaseAdmin();
+    try {
+        const hotelDoc = await db.collection('hotels').doc(hotelId).get();
+        if (!hotelDoc.exists) {
+            console.warn(`[Action: getHotelById] Hotel ${hotelId} not found.`);
+            return null;
+        }
+        return { id: hotelDoc.id, ...hotelDoc.data() } as Hotel;
+    } catch (error) {
+        console.error(`[Action: getHotelById] Error fetching hotel ${hotelId}:`, error);
+        return null;
+    }
+}
+
+export async function getHotelDashboardData(hotelId: string) {
+    console.log(`[Action: getHotelDashboardData] Fetching data for hotel ${hotelId}`);
+    const { db } = getFirebaseAdmin();
+
+    try {
+        const hotelDoc = await db.collection('hotels').doc(hotelId).get();
+        if (!hotelDoc.exists) {
+            throw new Error(`Hotel with ID ${hotelId} not found`);
+        }
+
+        const bookingsSnapshot = await db.collection('bookings').where('hotelId', '==', hotelId).get();
+
+        let totalRevenue = 0;
+        let confirmedBookings = 0;
+        let pendingActions = 0;
+        
+        bookingsSnapshot.forEach(doc => {
+            const booking = doc.data();
+            if (booking.status === 'confirmed') {
+                totalRevenue += parseFloat(booking.totalPrice || '0');
+                confirmedBookings++;
+            }
+            if (booking.status === 'pending_guest') {
+                pendingActions++;
+            }
+        });
+        
+        const recentActivities = bookingsSnapshot.docs
+            .sort((a, b) => b.data().createdAt.toMillis() - a.data().createdAt.toMillis())
+            .slice(0, 5)
+            .map(doc => {
+                const booking = doc.data();
+                return {
+                    id: doc.id,
+                    description: `New booking created for ${booking.guestName}.`,
+                    timestamp: new Date(booking.createdAt.toMillis()).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                };
+            });
+
+        return {
+            hotelName: hotelDoc.data()?.name || 'Unnamed Hotel',
+            stats: {
+                totalRevenue: totalRevenue.toFixed(2),
+                totalBookings: bookingsSnapshot.size,
+                confirmedBookings: confirmedBookings,
+                pendingActions: pendingActions,
+            },
+            recentActivities,
+        };
+    } catch (error) {
+        console.error(`[Action: getHotelDashboardData] Error fetching data for hotel ${hotelId}:`, error);
+        return null;
+    }
 }
