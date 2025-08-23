@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -30,8 +31,8 @@ export default function AdminDashboardPage() {
       setIsLoading(true);
       try {
         const fetchedHotels = await getHotels();
-        // @ts-ignore
-        setHotels(fetchedHotels);
+        // The fetchedHotels are already in the correct format, but we cast to be safe
+        setHotels(fetchedHotels as DisplayHotel[]);
       } catch (error) {
         console.error("Failed to fetch hotels:", error);
         // Handle error appropriately, maybe show a toast

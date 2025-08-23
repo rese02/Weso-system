@@ -81,7 +81,9 @@ export async function getHotels() {
                 ...hotelData,
                 id: doc.id,
                 bookings: bookingsCount,
-            } as Hotel;
+                // Ensure status is always present for the UI
+                status: hotelData.status || 'inactive',
+            };
         }));
 
         console.log(`[Action: getHotels] Found ${hotels.length} hotels.`);
@@ -159,7 +161,7 @@ export async function getHotelDashboardData(hotelId: string) {
             return {
                 id: doc.id,
                 description: `New booking from ${data.guestName}.`,
-                timestamp: format(data.createdAt, 'dd.MM.yyyy HH:mm')
+                timestamp: data.createdAt ? format(data.createdAt, 'dd.MM.yyyy HH:mm') : 'N/A'
             };
         });
 
@@ -179,7 +181,7 @@ export async function getHotelDashboardData(hotelId: string) {
 
     } catch (error) {
         console.error(`[Action: getHotelDashboardData] Error fetching dashboard data for hotel ${hotelId}:`, error);
-        // Return a default structure on error
+        // Return a default structure on error to prevent crashes
         return {
             hotelName: 'Hotel',
             stats: { totalRevenue: "0.00", totalBookings: 0, confirmedBookings: 0, pendingActions: 0 },
