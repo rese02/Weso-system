@@ -22,8 +22,8 @@ export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
     const hotelDoc = snapshot.docs[0];
     const hotelData = hotelDoc.data();
 
-    // In a real app, passwords should be hashed and compared securely.
-    // This is a plain text comparison for demonstration purposes.
+    // SECURITY-HINWEIS: In einer Produktionsanwendung sollten Passwörter niemals im Klartext gespeichert oder verglichen werden.
+    // Verwenden Sie stattdessen eine sichere Hashing-Bibliothek wie bcrypt, um die Passwörter zu hashen und zu vergleichen.
     if (hotelData.hotelierPassword === values.password) {
       console.log(`Login successful for hotel ${hotelDoc.id}`);
       return { success: true, message: 'Login successful!', hotelId: hotelDoc.id };
@@ -42,9 +42,16 @@ export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
 export async function loginAgency(values: z.infer<typeof agencyLoginSchema>) {
   console.log('Attempting agency login for:', values.email);
 
-  // This simulates checking for a user with an "agency" role claim.
-  // This part remains hardcoded as there's no "agency" data model yet.
-  if (values.email === 'admin@weso.com' && values.password === 'password123') {
+  // Anmeldedaten werden sicher aus Umgebungsvariablen gelesen.
+  const agencyEmail = process.env.AGENCY_EMAIL;
+  const agencyPassword = process.env.AGENCY_PASSWORD;
+
+  if (!agencyEmail || !agencyPassword) {
+    console.error("Agency credentials are not set in environment variables.");
+    return { success: false, message: 'Server configuration error.' };
+  }
+  
+  if (values.email === agencyEmail && values.password === agencyPassword) {
     console.log('Agency login successful.');
     return { success: true, message: 'Login successful!' };
   }
