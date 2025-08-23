@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon, User, PlusCircle, Trash2, BedDouble } from 'lucide-react';
+import { CalendarIcon, User, PlusCircle, Trash2, BedDouble, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { addDays, format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -53,7 +53,7 @@ export default function CreateBookingPage() {
     if (result.success) {
         toast({
             title: "Buchung erfolgreich erstellt!",
-            description: `Die Buchung für ${values.firstName} ${values.lastName} wurde angelegt.`,
+            description: `Die Buchung für ${values.firstName} ${values.lastName} wurde angelegt. Sie können den Gast-Link nun aus der Übersicht kopieren.`,
         });
         router.push(`/dashboard/${hotelId}/bookings`);
     } else {
@@ -261,10 +261,11 @@ export default function CreateBookingPage() {
 
             {/* --- Footer Buttons --- */}
             <div className="flex justify-end gap-4 pt-4">
-                <Button type="button" variant="outline" onClick={() => router.back()}>
+                <Button type="button" variant="outline" onClick={() => router.back()} disabled={form.formState.isSubmitting}>
                     Abbrechen
                 </Button>
                 <Button type="submit" disabled={form.formState.isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                     {form.formState.isSubmitting ? 'Wird erstellt...' : 'Buchung erstellen'}
                 </Button>
             </div>

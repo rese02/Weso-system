@@ -20,12 +20,14 @@ import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Booking } from '@/lib/definitions';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function BookingsPage() {
   const params = useParams();
   const hotelId = params.hotelId as string;
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
 
   useEffect(() => {
@@ -33,14 +35,22 @@ export default function BookingsPage() {
     
     const fetchBookings = async () => {
       setIsLoading(true);
-      const fetchedBookings = await getBookingsByHotel(hotelId);
-      // @ts-ignore
-      setBookings(fetchedBookings);
-      setIsLoading(false);
+      try {
+        const fetchedBookings = await getBookingsByHotel(hotelId);
+        setBookings(fetchedBookings);
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Fehler beim Laden',
+          description: 'Die Buchungen konnten nicht geladen werden.'
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
     
     fetchBookings();
-  }, [hotelId]);
+  }, [hotelId, toast]);
 
 
   const getStatusInfo = (status: string): { text: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode } => {
@@ -67,6 +77,15 @@ export default function BookingsPage() {
         return { text: 'Offen', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-red-600" /> };
     }
   };
+
+  const copyGuestLink = (guestLinkId: string) => {
+    const link = `${window.location.origin}/guest/${guestLinkId}`;
+    navigator.clipboard.writeText(link);
+    toast({
+      title: 'Link kopiert!',
+      description: 'Der Gast-Buchungslink wurde in die Zwischenablage kopiert.'
+    });
+  }
 
 
   return (
@@ -102,7 +121,7 @@ export default function BookingsPage() {
                 <TableHead>Check-out</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Letzte Änderung</TableHead>
-                <TableHead>Zahlungsstatus</TableHead>
+                <TableHead>Gast-Link</TableHead>
                 <TableHead className="text-right pr-4">Aktionen</TableHead>
               </TableRow>
             </TableHeader>
@@ -119,13 +138,12 @@ export default function BookingsPage() {
               ) : bookings.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="h-24 text-center">
-                    No bookings found.
+                    Noch keine Buchungen vorhanden.
                   </TableCell>
                 </TableRow>
               ) : (
                 bookings.map((booking) => {
                   const statusInfo = getStatusInfo(booking.status);
-                  const paymentStatusInfo = getPaymentStatusInfo(booking.status);
                   return (
                     <TableRow key={booking.id}>
                         <TableCell className="px-4"><Checkbox/></TableCell>
@@ -139,20 +157,16 @@ export default function BookingsPage() {
                                 <span>{statusInfo.text}</span>
                             </Badge>
                         </TableCell>
-                        <TableCell>{booking.updatedAt ? format(new Date(booking.updatedAt), 'dd.MM.yyyy, HH:mm:ss') : 'N/A'}</TableCell>
+                        <TableCell>{booking.updatedAt ? format(new Date(booking.updatedAt), 'dd.MM.yyyy, HH:mm:ss') : format(new Date(booking.createdAt), 'dd.MM.yyyy, HH:mm:ss')}</TableCell>
                         <TableCell>
-                             <Badge variant="outline" className="flex items-center w-fit bg-gray-100 text-gray-800 border-gray-200">
-                                {paymentStatusInfo.icon}
-                                <span>{paymentStatusInfo.text}</span>
-                            </Badge>
+                           <Button variant="outline" size="sm" onClick={() => copyGuestLink(booking.guestLinkId)}>
+                                <Copy className="h-3 w-3 mr-2"/> Link kopieren
+                            </Button>
                         </TableCell>
                         <TableCell className="text-right pr-4">
                             <div className="flex items-center justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                                     <Link href={`/dashboard/${hotelId}/bookings/${booking.id}`}><Eye className="h-4 w-4" /></Link>
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                    <Link href={`/guest/${booking.guestLinkId}`} target="_blank" rel="noopener noreferrer"><Copy className="h-4 w-4" /></Link>
                                 </Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>

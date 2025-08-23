@@ -1,4 +1,3 @@
-
 'use server';
 
 import type { z } from 'zod';
@@ -87,7 +86,7 @@ export async function getBookingsByHotel(hotelId: string): Promise<Booking[]> {
 
     try {
         const bookingsRef = adminDb.collection('bookings').where('hotelId', '==', hotelId);
-        const snapshot = await bookingsRef.orderBy('checkInDate', 'desc').get();
+        const snapshot = await bookingsRef.orderBy('createdAt', 'desc').get();
         
         if (snapshot.empty) {
             console.log(`[Action: getBookingsByHotel] No bookings found for hotel ${hotelId}`);
@@ -96,6 +95,7 @@ export async function getBookingsByHotel(hotelId: string): Promise<Booking[]> {
         
         const bookings = snapshot.docs.map(doc => convertTimestampsToDates(doc.data()) as Booking);
         console.log(`[Action: getBookingsByHotel] Found ${bookings.length} bookings for hotel ${hotelId}`);
+        // Return a serializable version of the bookings
         return JSON.parse(JSON.stringify(bookings));
 
     } catch (error) {
