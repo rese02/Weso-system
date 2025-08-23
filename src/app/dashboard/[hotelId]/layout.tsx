@@ -20,7 +20,7 @@ export default async function HotelierLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-secondary/50">
         <Sidebar>
           <div className="flex h-full flex-col">
             <div className="flex h-16 items-center border-b px-4">
@@ -65,7 +65,9 @@ export default async function HotelierLayout({
               userRole="hotelier"
             />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-              {children}
+               <div className="mx-auto w-full">
+                {children}
+              </div>
             </main>
         </div>
       </div>
