@@ -54,7 +54,7 @@ export function AgencyLoginForm() {
             <FormItem>
               <FormLabel>Email Address</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="admin@agency.com" {...field} />
+                <Input type="email" placeholder="admin@weso.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

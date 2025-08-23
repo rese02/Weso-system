@@ -2,19 +2,28 @@
 
 import type { z } from 'zod';
 import { hotelLoginSchema, agencyLoginSchema } from '@/lib/definitions';
+import { adminAuth } from '@/lib/firebase-admin';
 
-// This is a simplified login function. 
-// In a production app, you would use Firebase Auth on the client-side for a full-fledged, secure authentication flow.
-// The server would then verify the user's ID token.
+// This is a placeholder for a real authentication flow.
+// In a production app, you would use the Firebase Client SDK to sign the user in,
+// then get their ID token and send it to a server-side function to verify
+// and check for custom claims.
+
 export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
   console.log('Attempting hotelier login for:', values.email);
 
   // In a real app, you would verify credentials against Firebase Auth.
-  // For this prototype, we use a hardcoded credential for demonstration.
+  // This simulation checks for a specific user and returns their associated hotelId.
   if (values.email === 'manager@hotel-sonnenalp.com' && values.password === 'password123') {
+    // In a real scenario, you'd verify the user's token and get the hotelId from custom claims.
     return { success: true, message: 'Login successful!', hotelId: 'hotel-sonnenalp' };
   }
   
+  // Example for another hotel
+  if (values.email === 'manager@seehotel-traum.de' && values.password === 'password123') {
+    return { success: true, message: 'Login successful!', hotelId: 'seehotel-traum' };
+  }
+
   return { success: false, message: 'Invalid credentials. Please check your email and password.' };
 }
 
@@ -22,8 +31,7 @@ export async function loginHotelier(values: z.infer<typeof hotelLoginSchema>) {
 export async function loginAgency(values: z.infer<typeof agencyLoginSchema>) {
   console.log('Attempting agency login for:', values.email);
 
-  // In a real app, you would verify credentials against Firebase Auth and check for an "agency" custom claim.
-  // For this prototype, we use a hardcoded credential for demonstration.
+  // This simulates checking for a user with an "agency" role claim.
   if (values.email === 'admin@weso.com' && values.password === 'password123') {
     return { success: true, message: 'Login successful!' };
   }
