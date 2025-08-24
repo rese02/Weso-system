@@ -53,29 +53,27 @@ export type BookingDataForGuest = {
 }
 
 // Zod Schemas for validation
+
+// This schema is based on the provided, working Firestore data structure.
 export const createHotelSchema = z.object({
-  // Section A
-  hotelName: z.string().min(3, { message: 'Hotelname muss mindestens 3 Zeichen lang sein.' }),
+  name: z.string().min(3, { message: 'Hotelname muss mindestens 3 Zeichen lang sein.' }),
   domain: z.string().optional(),
-  logo: z.any().optional(), // In a real app, you'd use z.instanceof(File) or similar
-  hotelierEmail: z.string().email({ message: "Ungültige E-Mail-Adresse." }),
+  logo: z.any().optional(),
+  ownerEmail: z.string().email({ message: "Ungültige E-Mail-Adresse." }),
   hotelierPassword: z.string().min(8, { message: 'Passwort muss mindestens 8 Zeichen lang sein.' }),
-  
-  // Section B
   contactEmail: z.string().email({ message: "Ungültige Kontakt-E-Mail-Adresse." }),
   contactPhone: z.string(),
-  fullAddress: z.string().min(10, { message: "Vollständige Adresse ist erforderlich." }),
-
-  // Section C
-  meals: z.array(z.string()),
-  roomCategories: z.array(z.object({ name: z.string().min(2, {message: 'Kategoriename erforderlich'}) })).min(1, "Mindestens eine Zimmerkategorie ist erforderlich."),
-
-  // Section D
+  contactAddress: z.string().min(10, { message: "Vollständige Adresse ist erforderlich." }),
+  boardTypes: z.array(z.string()),
+  roomCategories: z.array(z.string()).min(1, "Mindestens eine Zimmerkategorie ist erforderlich."),
   bankAccountHolder: z.string(),
-  iban: z.string(),
-  bic: z.string(),
+  bankIBAN: z.string(),
+  bankBIC: z.string(),
   bankName: z.string(),
+  smtpUser: z.string().optional(),
+  smtpPass: z.string().optional(),
 });
+
 
 export const hotelLoginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -148,3 +146,5 @@ export const hotelDirectBookingSchema = z.object({
     message: "Das Abreisedatum muss nach dem Anreisedatum liegen.",
     path: ["dateRange"],
 });
+
+    

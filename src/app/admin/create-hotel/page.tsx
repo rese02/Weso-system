@@ -18,10 +18,10 @@ import { Separator } from '@/components/ui/separator';
 import { Hotel, Building, Upload, Mail, KeySquare, Phone, MapPin, Banknote, Trash2, PlusCircle, Wand2, Clipboard, Check, Loader2 } from 'lucide-react';
 
 const mealOptions = [
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'half_board', label: 'Half Board' },
-  { id: 'full_board', label: 'Full Board' },
-  { id: 'none', label: 'No Meal Plan' },
+  { id: 'Frühstück', label: 'Frühstück' },
+  { id: 'Halbpension', label: 'Halbpension' },
+  { id: 'Vollpension', label: 'Vollpension' },
+  { id: 'keine', label: 'No Meal Plan' },
 ] as const;
 
 type CreateHotelFormValues = z.infer<typeof createHotelSchema>;
@@ -34,20 +34,22 @@ export default function CreateHotelPage() {
   const form = useForm<CreateHotelFormValues>({
     resolver: zodResolver(createHotelSchema),
     defaultValues: {
-      hotelName: '',
+      name: '',
       domain: '',
       logo: '',
-      hotelierEmail: '',
+      ownerEmail: '',
       hotelierPassword: '',
       contactEmail: '',
       contactPhone: '',
-      fullAddress: '',
-      roomCategories: [{ name: 'Single Room' }, { name: 'Double Room' }, { name: 'Suite' }],
-      meals: [],
+      contactAddress: '',
+      roomCategories: ['Einzelzimmer', 'Doppelzimmer', 'Suite'],
+      boardTypes: [],
       bankAccountHolder: '',
-      iban: '',
-      bic: '',
+      bankIBAN: '',
+      bankBIC: '',
       bankName: '',
+      smtpUser: '',
+      smtpPass: '',
     },
   });
 
@@ -58,13 +60,13 @@ export default function CreateHotelPage() {
 
   const onSubmit = async (values: CreateHotelFormValues) => {
     // In a real app, the ownerId would come from the authenticated agency user's session
-    const valuesWithOwner = { ...values, ownerId: 'agency_weso_systems' };
+    const valuesWithOwner = { ...values, agencyId: 'agency_weso_systems', ownerUid: 'poLnjRLIPJfCrUcg8yMoKYz3ikl1' };
     
     const result = await createHotel(valuesWithOwner);
     if (result.success) {
       toast({
         title: "Hotel Created Successfully!",
-        description: `${values.hotelName} has been added to the system.`,
+        description: `${values.name} has been added to the system.`,
       });
       form.reset();
     } else {
@@ -88,7 +90,7 @@ export default function CreateHotelPage() {
   };
   
   const handleCopyEmail = () => {
-    copyToClipboard(form.getValues('hotelierEmail'), () => {
+    copyToClipboard(form.getValues('ownerEmail'), () => {
         setIsEmailCopied(true);
         setTimeout(() => setIsEmailCopied(false), 2000);
     });
@@ -123,7 +125,7 @@ export default function CreateHotelPage() {
             <div className="space-y-4">
               <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Basic Data / Access</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
-                <FormField control={form.control} name="hotelName" render={({ field }) => (
+                <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem><FormLabel>Hotel Name</FormLabel><FormControl><Input placeholder="Your Hotel Name" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="domain" render={({ field }) => (
@@ -139,7 +141,7 @@ export default function CreateHotelPage() {
                       </FormControl><FormMessage />
                   </FormItem>
                 )} />
-                  <FormField control={form.control} name="hotelierEmail" render={({ field }) => (
+                  <FormField control={form.control} name="ownerEmail" render={({ field }) => (
                   <FormItem><FormLabel>Hotelier's Email Address</FormLabel>
                       <FormControl>
                           <div className="relative">
@@ -182,7 +184,7 @@ export default function CreateHotelPage() {
                   <FormItem><FormLabel>Contact Phone Number</FormLabel><FormControl><Input placeholder="Your phone number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="md:col-span-2">
-                  <FormField control={form.control} name="fullAddress" render={({ field }) => (
+                  <FormField control={form.control} name="contactAddress" render={({ field }) => (
                       <FormItem><FormLabel>Full Address</FormLabel><FormControl><Input placeholder="Your full address" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
@@ -198,19 +200,19 @@ export default function CreateHotelPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                       <FormField
                           control={form.control}
-                          name="meals"
+                          name="boardTypes"
                           render={() => (
                               mealOptions.map((item) => (
                               <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
                                   <FormControl>
                                   <Checkbox
-                                      checked={form.watch('meals').includes(item.id)}
+                                      checked={form.watch('boardTypes').includes(item.id)}
                                       onCheckedChange={(checked) => {
-                                      const currentMeals = form.getValues('meals');
+                                      const currentMeals = form.getValues('boardTypes');
                                       if (checked) {
-                                          form.setValue('meals', [...currentMeals, item.id]);
+                                          form.setValue('boardTypes', [...currentMeals, item.id]);
                                       } else {
-                                          form.setValue('meals', currentMeals.filter((value) => value !== item.id));
+                                          form.setValue('boardTypes', currentMeals.filter((value) => value !== item.id));
                                       }
                                       }}
                                   />
@@ -230,7 +232,7 @@ export default function CreateHotelPage() {
                               <div key={field.id} className="flex items-center gap-2">
                               <FormField
                                   control={form.control}
-                                  name={`roomCategories.${index}.name`}
+                                  name={`roomCategories.${index}`}
                                   render={({ field }) => (
                                   <FormItem className="flex-grow">
                                       <FormControl><Input {...field} placeholder="e.g. Double Room" /></FormControl>
@@ -244,7 +246,7 @@ export default function CreateHotelPage() {
                               </div>
                           ))}
                       </div>
-                      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ name: '' })}>
+                      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append('')}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add Category
                       </Button>
                   </div>
@@ -261,11 +263,24 @@ export default function CreateHotelPage() {
                   <FormField control={form.control} name="bankName" render={({ field }) => (
                       <FormItem><FormLabel>Bank Name</FormLabel><FormControl><Input placeholder="Name of your bank" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
-                  <FormField control={form.control} name="iban" render={({ field }) => (
+                  <FormField control={form.control} name="bankIBAN" render={({ field }) => (
                       <FormItem><FormLabel>IBAN</FormLabel><FormControl><Input placeholder="Your IBAN" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
-                  <FormField control={form.control} name="bic" render={({ field }) => (
+                  <FormField control={form.control} name="bankBIC" render={({ field }) => (
                       <FormItem><FormLabel>BIC / SWIFT</FormLabel><FormControl><Input placeholder="Your BIC/SWIFT" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+              </div>
+            </div>
+            
+             {/* Section E: SMTP Details */}
+            <div className="space-y-4">
+              <h3 className="font-headline text-lg font-semibold flex items-center gap-2"><Mail className="h-5 w-5 text-primary"/>SMTP Details for Emailing</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+                  <FormField control={form.control} name="smtpUser" render={({ field }) => (
+                      <FormItem><FormLabel>SMTP Username</FormLabel><FormControl><Input placeholder="e.g. your-email@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="smtpPass" render={({ field }) => (
+                      <FormItem><FormLabel>SMTP Password</FormLabel><FormControl><Input type="password" placeholder="Your SMTP app password" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
               </div>
             </div>
@@ -282,3 +297,5 @@ export default function CreateHotelPage() {
     </Card>
   );
 }
+
+    
