@@ -4,7 +4,7 @@
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
-import type { createHotelSchema } from '@/lib/definitions';
+import { createHotelSchema } from '@/lib/definitions';
 import type { Hotel } from '@/lib/definitions';
 
 
@@ -36,7 +36,7 @@ export async function createHotel(values: z.infer<typeof CreateHotelServerSchema
   const hotelRef = db.collection('hotels').doc(); 
   const now = FieldValue.serverTimestamp();
   
-  const { logo, hotelierPassword, ...dataToStore } = parsed.data;
+  const { logo, ...dataToStore } = parsed.data;
 
   const hotelDoc = {
     ...dataToStore,
