@@ -161,7 +161,7 @@ export async function createHotel(values: z.infer<typeof createHotelSchema> & { 
     const errorMessage = err instanceof Error ? err.message : String(err);
     return {
       success: false,
-      message: `An unexpected error occurred on the server: ${errorMessage}`,
+      message: `Database operation failed: ${errorMessage}`,
     };
   }
 }
