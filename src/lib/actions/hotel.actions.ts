@@ -9,7 +9,6 @@ import type { Hotel } from '@/lib/definitions';
 
 
 // This schema is used for validating the data from the form on the server.
-// It is slightly different from the client-side schema as it expects the ownerId.
 const CreateHotelServerSchema = createHotelSchema.extend({
   agencyId: z.string().min(1, "Agency ID is required."),
   ownerUid: z.string().min(1, "Owner UID is required."),
@@ -18,7 +17,7 @@ const CreateHotelServerSchema = createHotelSchema.extend({
 /**
  * Creates a hotel document based on the provided flat structure.
  */
-export async function createHotel(values: z.infer<typeof CreateHotelServerSchema>) {
+export async function createHotel(values: z.infer<typeof createHotelSchema> & { agencyId: string; ownerUid: string }) {
   console.log('admin.apps.length', getFirebaseAdmin() ? 'SDK seems loaded' : 'SDK not loaded');
   const parsed = CreateHotelServerSchema.safeParse(values);
 
@@ -164,5 +163,3 @@ export async function getHotelDashboardData(hotelId: string) {
         return null;
     }
 }
-
-    

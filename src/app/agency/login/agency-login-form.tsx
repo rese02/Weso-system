@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -84,7 +84,12 @@ export function AgencyLoginForm() {
           )}
         />
         <Button type="submit" className="w-full text-lg h-12 font-bold" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Logging in...' : (
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Logging in...
+            </>
+          ) : (
               <>
                   <LogIn className="mr-2 h-5 w-5" />
                   Login

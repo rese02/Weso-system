@@ -50,7 +50,7 @@ export default function AdminDashboardPage() {
           <h1 className="font-headline text-3xl md:text-4xl font-bold">Verwaltete Hotels</h1>
           <p className="text-muted-foreground">Verwalten und überblicken Sie alle Hotelobjekte von hier aus.</p>
         </div>
-        <Button asChild className="h-12 px-6">
+        <Button asChild>
           <Link href="/admin/create-hotel">
             <PlusCircle className="mr-2 h-5 w-5" />
             Neues Hotel erstellen
@@ -58,47 +58,42 @@ export default function AdminDashboardPage() {
         </Button>
       </div>
       
-      {isLoading ? (
-        <Card className="w-full">
-            <CardContent className="p-6">
-                 <div className="flex justify-center items-center h-64">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-            </CardContent>
-        </Card>
-      ) : hotels.length === 0 ? (
-          <Card className="w-full text-center p-8 border-dashed">
-            <CardHeader>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary">
-                    <Hotel className="h-8 w-8" />
-                </div>
-              <CardTitle className="mt-4">Noch keine Hotels vorhanden</CardTitle>
-              <CardDescription>Erstellen Sie Ihr erstes Hotel, um mit der Verwaltung zu beginnen.</CardDescription>
-            </CardHeader>
-            <CardContent>
-               <Button asChild className="h-12 px-6">
-                  <Link href="/admin/create-hotel">
-                    <PlusCircle className="mr-2 h-5 w-5" />
-                    Erstes Hotel erstellen
-                  </Link>
-                </Button>
-            </CardContent>
-          </Card>
-      ) : (
-        <Card className="w-full">
-            <CardContent className="p-0">
-                <Table>
-                    <TableHeader>
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-6 h-64">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Hotelname</TableHead>
+                    <TableHead className="hidden sm:table-cell">Domain</TableHead>
+                    <TableHead className="hidden md:table-cell">Buchungen</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aktionen</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {hotels.length === 0 ? (
                         <TableRow>
-                        <TableHead>Hotelname</TableHead>
-                        <TableHead className="hidden sm:table-cell">Domain</TableHead>
-                        <TableHead className="hidden md:table-cell">Buchungen</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Aktionen</TableHead>
+                            <TableCell colSpan={5} className="h-64 text-center">
+                                <div className="flex flex-col items-center gap-4">
+                                    <Hotel className="h-12 w-12 text-muted-foreground" />
+                                    <h3 className="font-semibold">Noch keine Hotels vorhanden</h3>
+                                    <p className="text-muted-foreground">Erstellen Sie Ihr erstes Hotel, um mit der Verwaltung zu beginnen.</p>
+                                    <Button asChild>
+                                        <Link href="/admin/create-hotel">
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Erstes Hotel erstellen
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {hotels.map((hotel) => (
+                    ) : (
+                        hotels.map((hotel) => (
                         <TableRow key={hotel.id}>
                             <TableCell className="font-medium">{hotel.name}</TableCell>
                             <TableCell className="text-muted-foreground hidden sm:table-cell">{hotel.domain}</TableCell>
@@ -133,12 +128,13 @@ export default function AdminDashboardPage() {
                             </DropdownMenu>
                             </TableCell>
                         </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-      )}
+                        ))
+                    )}
+                </TableBody>
+            </Table>
+          )}
+        </CardContent>
+    </Card>
     </div>
   );
 }

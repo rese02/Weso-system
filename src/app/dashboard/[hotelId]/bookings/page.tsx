@@ -14,7 +14,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Trash2, CheckCircle, Clock, Eye, Copy, AlertCircle, CircleOff, Loader2 } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, CheckCircle, Clock, Eye, Copy, AlertCircle, CircleOff, Loader2, Bed } from 'lucide-react';
 import { getBookingsByHotel } from '@/lib/actions/booking.actions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
@@ -67,18 +67,6 @@ export default function BookingsPage() {
     }
   };
   
-   const getPaymentStatusInfo = (status: string): { text: string; icon: React.ReactNode } => {
-    // This is a placeholder as payment status is not in the data model yet
-    switch (status) {
-      case 'confirmed': // Assuming 'confirmed' booking means partial payment
-        return { text: 'Teilzahlung', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-yellow-600" /> };
-      case 'pending_guest':
-        return { text: 'Offen', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-red-600" /> };
-      default:
-        return { text: 'Offen', icon: <Clock className="h-3.5 w-3.5 mr-1.5 text-red-600" /> };
-    }
-  };
-
   const copyGuestLink = (guestLinkId: string) => {
     const link = `${window.location.origin}/guest/${guestLinkId}`;
     navigator.clipboard.writeText(link);
@@ -88,7 +76,6 @@ export default function BookingsPage() {
     });
   }
 
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -97,7 +84,7 @@ export default function BookingsPage() {
           <p className="text-muted-foreground">Alle Buchungen für Ihr Hotel anzeigen und verwalten.</p>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant="outline">
+            <Button variant="outline" disabled>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Löschen
             </Button>
@@ -129,17 +116,27 @@ export default function BookingsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    <div className="flex justify-center items-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      <span className="ml-2">Loading bookings...</span>
+                  <TableCell colSpan={9} className="h-64 text-center">
+                    <div className="flex flex-col justify-center items-center gap-4">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span>Lade Buchungen...</span>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : bookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    Noch keine Buchungen vorhanden.
+                  <TableCell colSpan={9} className="h-64 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Bed className="h-12 w-12 text-muted-foreground" />
+                        <h3 className="font-semibold">Noch keine Buchungen vorhanden</h3>
+                        <p className="text-muted-foreground">Erstellen Sie Ihre erste Buchung, um loszulegen.</p>
+                        <Button asChild>
+                          <Link href={`/dashboard/${hotelId}/bookings/create-booking`}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Erste Buchung erstellen
+                          </Link>
+                        </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -158,7 +155,7 @@ export default function BookingsPage() {
                                 <span>{statusInfo.text}</span>
                             </Badge>
                         </TableCell>
-                        <TableCell>{booking.updatedAt ? format(new Date(booking.updatedAt), 'dd.MM.yyyy, HH:mm:ss') : format(new Date(booking.createdAt), 'dd.MM.yyyy, HH:mm:ss')}</TableCell>
+                        <TableCell>{booking.updatedAt ? format(new Date(booking.updatedAt), 'dd.MM.yyyy, HH:mm') : format(new Date(booking.createdAt), 'dd.MM.yyyy, HH:mm')}</TableCell>
                         <TableCell>
                            <Button variant="outline" size="sm" onClick={() => copyGuestLink(booking.guestLinkId)}>
                                 <Copy className="h-3 w-3 mr-2"/> Link kopieren
